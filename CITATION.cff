@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+title: "LBM"
+message: >
+  If you use this software in your research, please cite it using the
+  metadata provided in this file.
+type: software
+authors:
+  - family-names: "dos Anjos"
+    given-names: "Bruno Yan"
+    orcid: "https://orcid.org/0009-0002-8653-0901"
+affiliation: "UDESC - Universidade do Estado de Santa Catarina"
+repository-code: "https://github.com/brunoyanjos/lbm"
+version: "0.0.1"
+date-released: 2026-01-01
+license: "MIT"
+keywords:
+  - Lattice Boltzmann Method
+  - LBM
+  - CUDA
+  - High Performance Computing
+  - Computational Fluid Dynamics
+abstract: >
+  CUDA C++ framework for stencil analysis, boundary condition studies,
+  and performance evaluation within the Lattice Boltzmann Method.
+references:
+  - type: thesis
+    title: >
+      A Unified Solver-Based Formulation of Regularized Boundary Conditions
+      Applied to the Lattice Boltzmann Method in Two and Three Dimensions
+    authors:
+      - family-names: "dos Anjos"
+        given-names: "Bruno Yan"
+    institution: "UDESC - Universidade do Estado de Santa Catarina"
+    year: 2026
+    status: forthcoming

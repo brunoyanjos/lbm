@@ -2,11 +2,11 @@
 #include <string>
 #include <cuda_runtime.h>
 
-#include "src/core/cuda_utils.cuh"
-#include "src/app/cuda_config.cuh"
-#include "src/app/simulation.cuh"
-#include "src/app/simulation_summary.cuh"
-#include "src/app/run_context.cuh"
+#include "core/cuda_utils.cuh"
+#include "app/cuda_config.cuh"
+#include "app/simulation.cuh"
+#include "app/simulation_summary.cuh"
+#include "app/run_context.cuh"
 
 static std::string get_arg(int argc, char **argv, const std::string &key, const std::string &def)
 {
