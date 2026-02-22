@@ -1,6 +1,7 @@
 #include "lbm_mom_step.cuh"
 #include "stencil_active.cuh"
 #include "boundary/regularized_boundary_condition.cuh"
+#include "boundary/fluid_moment_evaluation.cuh"
 #include "collision/collision.cuh"
 #include "moment_evaluation/moment_evaluation.cuh"
 #include "moment_evaluation/moment_scaling.cuh"
@@ -32,8 +33,6 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
 
     real_t rho, ux, uy, mxx, mxy, myy;
 
-    evaluate_moments_from_pop(pop, rho, ux, uy, mxx, mxy, myy);
-
     if (wall_id != static_cast<uint8_t>(WallId::NONE))
     {
         ux = real_t(0);
@@ -42,11 +41,25 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
         if (wall_id == static_cast<uint8_t>(WallId::TOP))
             ux = U_LID;
 
-        apply_boundary(pop, valid_ms, rho, ux, uy, mxx, mxy, myy, x, y, wall_id);
+        apply_boundary(pop, valid_ms, rho, ux, uy, mxx, mxy, myy);
     }
     else
     {
-        evaluate_moments_from_pop(pop, rho, ux, uy, mxx, mxy, myy);
+        if (is_full_mask(valid_ms))
+        {
+            evaluate_moments_from_pop(pop, rho, ux, uy, mxx, mxy, myy);
+        }
+        else
+        {
+            rho = S.d_rho[c][idxGlobal(x, y)] + RHO_0;
+            ux = S.d_ux[c][idxGlobal(x, y)] / Stencil::as2;
+            uy = S.d_uy[c][idxGlobal(x, y)] / Stencil::as2;
+            mxx = S.d_mxx[c][idxGlobal(x, y)] / (Stencil::as4 * real_t(0.5));
+            mxy = S.d_mxy[c][idxGlobal(x, y)] / Stencil::as4;
+            myy = S.d_myy[c][idxGlobal(x, y)] / (Stencil::as4 * real_t(0.5));
+
+            evaluate_fluid_node(pop, valid_ms, rho, ux, uy, mxx, mxy, myy);
+        }
     }
 
     // 3) scale to the stored basis

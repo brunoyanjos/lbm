@@ -14,7 +14,7 @@ __device__ __forceinline__ void apply_boundary(
     uint32_t valid_mask,
     real_t &rho,
     real_t ux_bc, real_t uy_bc,
-    real_t &mxx, real_t &mxy, real_t &myy, int x, int y, uint8_t wall_id)
+    real_t &mxx, real_t &mxy, real_t &myy)
 {
     const uint32_t outgoing_mask = valid_mask;
     const uint32_t incoming_mask = mask_opp(valid_mask);
@@ -106,13 +106,10 @@ __device__ __forceinline__ void apply_boundary(
 
     constexpr int Nsys = 3;
 
-    real_t Uflat[Nsys * Nsys] = {
-        real_t(0), real_t(0), real_t(0),
-        real_t(0), real_t(0), real_t(0),
-        real_t(0), real_t(0), real_t(0)};
+    real_t Uflat[Nsys * Nsys]{};
 
-    real_t d[Nsys] = {real_t(0), real_t(0), real_t(0)};
-    real_t m[Nsys] = {real_t(0), real_t(0), real_t(0)};
+    real_t d[Nsys]{};
+    real_t m[Nsys]{};
 
     auto U = [&](int r, int c) -> real_t &
     { return Uflat[r * Nsys + c]; };
