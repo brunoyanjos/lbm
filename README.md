@@ -100,11 +100,20 @@ interface.
 
 ## Project Structure
 
-src/ ├── app/ \# Simulation control, CUDA configuration, progress UI ├──
-core/ \# Geometry, types, utilities, configuration ├── io/ \# Output
-routines (VTK, metadata, performance) └── lbm/ \# Core LBM
-implementation ├── boundary/ ├── collision/ ├── domain/ ├──
-moment_evaluation/ ├── population/ ├── state/ └── stencils/
+```text
+src/
+├── app/                     # Simulation control, CUDA configuration, progress UI
+├── core/                    # Geometry, types, utilities, configuration
+├── io/                      # Output routines (VTK, metadata, performance)
+└── lbm/                     # Core LBM implementation
+    ├── boundary/
+    ├── collision/
+    ├── domain/
+    ├── moment_evaluation/
+    ├── population/
+    ├── state/
+    └── stencils/
+```
 
 - `app/` handles execution flow and benchmarking.
 - `lbm/` contains the numerical method implementation.
