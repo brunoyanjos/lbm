@@ -133,21 +133,35 @@ src/
 
 ### Compile (default configuration)
 
+```bash
 ./compile.sh
+```
 
 ### Example with custom configuration
 
+```bash
 STENCIL=D2Q9 REAL=double DEBUG=1 ./compile.sh
+```
 
 ---
 
 ## Run
 
-The executable is generated under: build/`<configuration>`{=html}/sim
+The executable is generated under:
+
+```text
+build/<configuration>/sim
+```
 
 By default, `compile.sh` runs the simulation automatically.
 
-Outputs are written to: runs/`<timestamp>`{=html}/ ├── vtk/ └── logs/
+Outputs are written to:
+
+```text
+runs/<timestamp>/
+├── vtk/
+└── logs/
+```
 
 ---
 
