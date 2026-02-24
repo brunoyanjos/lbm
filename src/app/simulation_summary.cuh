@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "../core/geometry.h"
+#include "../core/physics.h"
 #include "../app/cuda_config.cuh"
 #include "../lbm/stencil_active.cuh"
 
@@ -36,6 +37,15 @@ inline void print_simulation_summary(const CudaConfig &cfg,
               << NX << " x " << NY << "\n";
     std::cout << "Total nodes       : "
               << NX * NY << "\n\n";
+
+    // Physics / nondimensional
+    std::cout << "Re                : " << RE << "\n";
+    std::cout << "U_lid             : " << U_LID << "\n";
+    std::cout << "L_char            : " << L_CHAR << "\n";
+    std::cout << "nu (visc)         : " << VISC << "\n";
+    std::cout << "tau               : " << TAU << "\n";
+    std::cout << "omega             : " << OMEGA << "\n";
+    std::cout << "rho_0             : " << RHO_0 << "\n\n";
 
     // Kernel config
     const size_t threads_per_block = cfg.block.x * cfg.block.y;

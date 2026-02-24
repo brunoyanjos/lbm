@@ -6,6 +6,8 @@
 #include "../io/output_meta.cuh"
 #include "../io/output_vtk.cuh"
 #include "../io/output_tags_vtk.cuh"
+#include "../io/output_tke_bin.cuh"
+#include "../io/output_centerline_bin.cuh"
 
 #include "../lbm/state/lbm_state.cuh"
 #include "../lbm/lbm_init_state.cuh"
@@ -82,6 +84,10 @@ namespace app
             if (ctx.enable_io && (t % SAVE_INTERVAL == 0))
             {
                 upload_state_to_host(state);
+
+                const double ke = io::compute_ke_host_2d(state);
+
+                io::tke_bin_append(ctx.out_dir, t, ke);
                 io::write_vtk(state, cfg, t, ctx.out_dir);
             }
 
@@ -106,6 +112,12 @@ namespace app
 
                 ui.print(t, wall_elapsed_s, gpu_elapsed_s, mlups_partial);
             }
+        }
+
+        if (ctx.enable_io)
+        {
+            upload_state_to_host(state);
+            io::write_centerline_profiles(state, t_end * U_LID / NX, ctx.out_dir);
         }
 
         const double gpu_s = gt.stop_seconds();

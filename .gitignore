@@ -9,6 +9,15 @@ build/
 *.exe
 *.out
 
+# ===============================
+# Postprocess artifacts
+# ===============================
+postprocess/outcomes/
+postprocess/.venv/
+
+# setuptools metadata
+*.egg-info/
+
 # =========================
 # CUDA artifacts
 # =========================

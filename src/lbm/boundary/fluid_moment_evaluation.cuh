@@ -297,4 +297,15 @@ __device__ inline void evaluate_fluid_node(
         error = fmax(error, rel_step(mxy, mxy_old));
         error = fmax(error, rel_step(myy, myy_old));
     }
+
+    real_t rho_denom = (sum_Os_wi +
+                        sum_Os_wi_Hx * ux +
+                        sum_Os_wi_Hy * uy +
+                        sum_Os_wi_Hxx * ((1 - OMEGA) * mxx + OMEGA * ux * ux) +
+                        real_t(2) * sum_Os_wi_Hxy * ((1 - OMEGA) * mxy + OMEGA * ux * uy) +
+                        sum_Os_wi_Hyy * ((1 - OMEGA) * myy + OMEGA * uy * uy));
+
+    real_t inv_rho_denom = real_t(1) / rho_denom;
+
+    rho = rho_I * inv_rho_denom;
 }

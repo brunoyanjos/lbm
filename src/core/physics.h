@@ -3,7 +3,11 @@
 #include "geometry.h"
 #include "../lbm/stencil_active.cuh"
 
-constexpr real_t RE = static_cast<real_t>(50000.0);
+#ifndef LBM_RE
+#define LBM_RE 7500.0
+#endif
+
+constexpr real_t RE = static_cast<real_t>(LBM_RE);
 constexpr real_t U_LID = static_cast<real_t>(0.0256);
 
 constexpr real_t L_CHAR = static_cast<real_t>(NX - 1);

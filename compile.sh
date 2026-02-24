@@ -19,8 +19,9 @@ set -euo pipefail
 : "${RDC:=0}"
 : "${REAL:=float}"
 : "${RUN:=1}"
+: "${RE:=}"
 : "${RUN_ID:=}"
-: "${STENCIL:=D2V17}"
+: "${STENCIL:=D2Q9}"
 : "${VERBOSE:=0}"
 : "${WARMUP:=100}"
 
@@ -112,6 +113,10 @@ else
   NVCCFLAGS+=(-DLBM_STENCIL_D2V17)
 fi
 
+if [[ -n "${RE}" ]]; then
+  NVCCFLAGS+=(-DLBM_RE="${RE}")
+fi
+
 if [[ "${REAL}" == "double" ]]; then
   NVCCFLAGS+=(-DREAL_T_IS_DOUBLE)
 fi
@@ -173,7 +178,7 @@ if [[ "${RUN}" == "1" ]]; then
   fi
 
   OUT_DIR="${OUT_ROOT}/${RUN_ID}"
-  mkdir -p "${OUT_DIR}/vtk" "${OUT_DIR}/logs"
+  mkdir -p "${OUT_DIR}/vtk" "${OUT_DIR}/logs" "${OUT_DIR}/outputs"
 
   echo "[RUN] out_dir=${OUT_DIR}"
 
