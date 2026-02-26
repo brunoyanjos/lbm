@@ -1,0 +1,32 @@
+Metadata-Version: 2.4
+Name: lbm-post
+Version: 0.1.0
+Summary: Postprocessing tools for LBM solver
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: numpy
+Requires-Dist: matplotlib
+
+# LBM Postprocessing
+
+## Setup
+
+```bash
+cd postprocess
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install -e .
+```
+
+## Usage
+
+From inside postprocess/:
+
+plot-tke <RUN_ID>
+
+Example:
+plot-tke 20260223_170117
+
+The figure will be saved to:
+postprocess/outcomes/<RUN_ID>/tke.png
