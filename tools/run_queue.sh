@@ -36,7 +36,10 @@ for c in "${cases[@]}"; do
   echo "[CASE] STENCIL=${STENCIL}  RE=${RE}  RUN_ID=${RUN_ID}"
   echo "================================================="
 
-  ./compile.sh
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+  bash "${ROOT_DIR}/compile.sh"
 
   echo
 done
