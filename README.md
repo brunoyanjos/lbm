@@ -1,22 +1,28 @@
 # LBM
 
-CUDA C++ LBM framework for stencil analysis, boundary condition studies, and performance evaluation.
+CUDA C++ LBM framework for stencil analysis, boundary condition studies,
+and performance evaluation.
 
 ---
 
 ## Overview
 
-This repository contains a research-oriented CUDA C++ implementation of the Lattice Boltzmann Method (LBM). The project is designed as a structured framework for systematic numerical and architectural studies.
+This repository contains a research-oriented CUDA C++ implementation of
+the Lattice Boltzmann Method (LBM). The project is designed as a
+structured framework for systematic numerical and architectural studies.
 
 The main research directions include:
 
-- Stencil design and comparison (D2Q9 implemented, D2V17/D3Q19/D3Q27 planned)
+- Stencil design and comparison (D2Q9 implemented, D2V17/D3Q19/D3Q27
+  planned)
 - Boundary condition treatments (regularized formulations)
-- Solver framework strategies (e.g., double-array, AB variants, and related designs)
+- Solver framework strategies (e.g., double-array, AB variants, and
+  related designs)
 - Performance benchmarking in MLUPS
 - Progressive extension toward higher-order and advanced formulations
 
-The project is currently under active development and includes preliminary results.
+The project is currently under active development and includes
+preliminary results.
 
 ---
 
@@ -59,12 +65,16 @@ The solver currently implements:
 
 The regularized boundary treatment follows formulations described in:
 
-Hegele Jr., L. A., Scagliarini, A., Sbragaglia, M., Mattila, K. K., Philippi, P. C., Puleri, D. F., Gounley, J., & Randles, A.  
-High-Reynolds-number turbulent cavity flow using the lattice Boltzmann method.  
-Physical Review E, 98, 043302 (2018).  
+Hegele Jr., L. A., Scagliarini, A., Sbragaglia, M., Mattila, K. K.,
+Philippi, P. C., Puleri, D. F., Gounley, J., & Randles, A.\
+High-Reynolds-number turbulent cavity flow using the lattice Boltzmann
+method.\
+Physical Review E, 98, 043302 (2018).\
 https://doi.org/10.1103/PhysRevE.98.043302
 
-The framework is structured to support further extensions toward higher-order moment representations and alternative collision strategies.
+The framework is structured to support further extensions toward
+higher-order moment representations and alternative collision
+strategies.
 
 ---
 
@@ -83,24 +93,27 @@ MLUPS = (NX × NY × measured_steps) / gpu_time / 1e6
 
 Both GPU-based and wall-based MLUPS are reported.
 
-Partial MLUPS values are displayed during runtime through the progress interface.
+Partial MLUPS values are displayed during runtime through the progress
+interface.
 
 ---
 
 ## Project Structure
 
+```text
 src/
-├── app/ # Simulation control, CUDA configuration, progress UI
-├── core/ # Geometry, types, utilities, configuration
-├── io/ # Output routines (VTK, metadata, performance)
-└── lbm/ # Core LBM implementation
-├── boundary/
-├── collision/
-├── domain/
-├── moment_evaluation/
-├── population/
-├── state/
-└── stencils/
+├── app/                     # Simulation control, CUDA configuration, progress UI
+├── core/                    # Geometry, types, utilities, configuration
+├── io/                      # Output routines (VTK, metadata, performance)
+└── lbm/                     # Core LBM implementation
+    ├── boundary/
+    ├── collision/
+    ├── domain/
+    ├── moment_evaluation/
+    ├── population/
+    ├── state/
+    └── stencils/
+```
 
 - `app/` handles execution flow and benchmarking.
 - `lbm/` contains the numerical method implementation.
@@ -120,25 +133,35 @@ src/
 
 ### Compile (default configuration)
 
+```bash
 ./compile.sh
+```
 
 ### Example with custom configuration
 
+```bash
 STENCIL=D2Q9 REAL=double DEBUG=1 ./compile.sh
+```
 
 ---
 
 ## Run
 
 The executable is generated under:
+
+```text
 build/<configuration>/sim
+```
 
 By default, `compile.sh` runs the simulation automatically.
 
 Outputs are written to:
+
+```text
 runs/<timestamp>/
 ├── vtk/
 └── logs/
+```
 
 ---
 
@@ -146,7 +169,7 @@ runs/<timestamp>/
 
 This is a research codebase under active development.
 
-Issues are currently disabled.  
+Issues are currently disabled.\
 Comments and suggestions are welcome.
 
 ---
