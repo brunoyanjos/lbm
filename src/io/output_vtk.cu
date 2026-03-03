@@ -93,7 +93,6 @@ namespace io
             {
                 const size_t idx = idxGlobal(x, y);
 
-                // h_ux/h_uy store scaled velocity (as2*u) by current convention
                 const real_t ux = S.h_ux[idx] / Stencil::as2;
                 const real_t uy = S.h_uy[idx] / Stencil::as2;
 
