@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include "../lbm/domain/cavity_square_tags.cuh"
+#include "../lbm/domain/active_geometry.cuh"
 
 namespace io
 {

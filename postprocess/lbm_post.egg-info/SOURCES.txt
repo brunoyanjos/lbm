@@ -16,5 +16,7 @@ post/io/formats.py
 post/io/read_bin.py
 post/io/read_stdout.py
 post/plots/__init__.py
+post/plots/annul_pressure.py
+post/plots/annul_profile.py
 post/plots/centerlines.py
 post/plots/tke.py

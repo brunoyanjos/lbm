@@ -16,7 +16,7 @@ namespace io
 
     void write_tags_vtk(const DomainTags &T, const std::string &out_dir)
     {
-        if (!T.h_valid || !T.h_wall)
+        if (!T.h_valid || !T.h_node)
         {
             std::cerr << "[VTK-TAGS] Host buffers missing. Allocate DomainTags with host_buffers=true.\n";
             return;
@@ -52,7 +52,7 @@ namespace io
             for (int x = 0; x < NX; ++x)
             {
                 const size_t idx = idxGlobal(x, y);
-                file << static_cast<unsigned int>(T.h_wall[idx]) << "\n";
+                file << static_cast<unsigned int>(T.h_node[idx]) << "\n";
             }
         }
 

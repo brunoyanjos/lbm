@@ -9,24 +9,150 @@ Requires-Dist: matplotlib
 
 # LBM Postprocessing
 
+Postprocessing tools for the CUDA LBM solver.
+
+This module reads simulation outputs from:
+
+runs/`<RUN_ID>`{=html}/
+
+and generates publication-ready figures inside:
+
+postprocess/outcomes/`<RUN_ID>`{=html}/
+
+The tool automatically extracts simulation metadata from:
+
+runs/`<RUN_ID>`{=html}/logs/stdout.txt
+
+so no physical parameters need to be manually passed to the CLI.
+
+---
+
+## Directory Structure
+
+Expected layout:
+
+    runs/
+      <RUN_ID>/
+        logs/
+          stdout.txt
+        outputs/
+          tke.bin
+          centerline.bin
+          vtk/
+
+Generated results:
+
+    postprocess/
+      outcomes/
+        <RUN_ID>/
+          tke.png
+          centerline.png
+
+---
+
 ## Setup
 
+From inside `postprocess/`:
+
 ```bash
-cd postprocess
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
 pip install -e .
 ```
 
+Dependencies are defined in `pyproject.toml`.
+
+---
+
 ## Usage
 
-From inside postprocess/:
+All commands must be executed from inside `postprocess/`.
 
-plot-tke <RUN_ID>
+### Plot kinetic energy
+
+```bash
+lbm-post tke <RUN_ID>
+```
 
 Example:
-plot-tke 20260223_170117
 
-The figure will be saved to:
-postprocess/outcomes/<RUN_ID>/tke.png
+```bash
+lbm-post tke 20260223_203918
+```
+
+Output:
+
+    postprocess/outcomes/<RUN_ID>/tke.png
+
+The figure title automatically includes:
+
+- Stencil
+- Reynolds number
+- MLUPS performance
+
+---
+
+### Plot centerline velocity profiles (2D cavity)
+
+```bash
+lbm-post centerline <RUN_ID>
+```
+
+Example:
+
+```bash
+lbm-post centerline 20260223_203918
+```
+
+This command:
+
+- Reads `centerline.bin`
+- Extracts `U_lid` and `Re` from `stdout.txt`
+- Overlays Ghia et al. benchmark data (when available)
+
+Output:
+
+    postprocess/outcomes/<RUN_ID>/centerline.png
+
+---
+
+## Optional Arguments
+
+You may override directories:
+
+```bash
+lbm-post --runs-dir ../runs --out-dir outcomes centerline <RUN_ID>
+```
+
+---
+
+## Benchmark Reference
+
+Ghia, U., Ghia, K. N., & Shin, C. T. (1982).\
+High-Re solutions for incompressible flow using the Navier-Stokes
+equations and a multigrid method.\
+Journal of Computational Physics, 48(3), 387--411.
+
+Benchmark data are embedded for selected Reynolds numbers (e.g., Re =
+7500).
+
+---
+
+## Notes
+
+- Binary formats are little-endian.
+- `centerline.bin` uses float32 (consistent with `real_t = float`).
+- All normalization conventions follow the solver's internal
+  definitions.
+
+---
+
+## Development Mode
+
+After modifying code:
+
+```bash
+pip install -e .
+```
+
+to refresh the CLI entrypoint.

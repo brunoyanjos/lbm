@@ -4,14 +4,16 @@
 #include "../../core/linear_solver.cuh"
 #include "../domain/mask_utils.cuh"
 #include "../../core/physics.h"
+#include "../../core/math_utils.cuh"
 #include <cstdint>
 
-__device__ inline void evaluate_fluid_node(
+__device__ inline void evaluate_fluid_boundary(
     real_t *__restrict__ pop,
     uint32_t valid_mask,
     real_t &rho,
     real_t &ux, real_t &uy,
-    real_t &mxx, real_t &mxy, real_t &myy)
+    real_t &mxx, real_t &mxy, real_t &myy,
+    int x, int y)
 {
     const uint32_t outgoing_mask = valid_mask;
     const uint32_t incoming_mask = mask_opp(valid_mask);
@@ -20,80 +22,73 @@ __device__ inline void evaluate_fluid_node(
     real_t b_coeff[5]{};
 
     // incoming moments
-    real_t rho_I = real_t(0);
+    real_t rho_I = r::zero;
 
-    real_t ux_I = real_t(0);
-    real_t uy_I = real_t(0);
+    real_t ux_I = r::zero;
+    real_t uy_I = r::zero;
 
-    real_t mxx_I = real_t(0);
-    real_t mxy_I = real_t(0);
-    real_t myy_I = real_t(0);
+    real_t mxx_I = r::zero;
+    real_t mxy_I = r::zero;
+    real_t myy_I = r::zero;
 
     // from rho equation
-    real_t sum_Os_wi = real_t(0);
+    real_t sum_Os_wi = r::zero;
 
-    real_t sum_Os_wi_Hx = real_t(0);
-    real_t sum_Os_wi_Hy = real_t(0);
+    real_t sum_Os_wi_Hx = r::zero;
+    real_t sum_Os_wi_Hy = r::zero;
 
-    real_t sum_Os_wi_Hxx = real_t(0);
-    real_t sum_Os_wi_Hxy = real_t(0);
-    real_t sum_Os_wi_Hyy = real_t(0);
+    real_t sum_Os_wi_Hxx = r::zero;
+    real_t sum_Os_wi_Hxy = r::zero;
+    real_t sum_Os_wi_Hyy = r::zero;
 
     // from uxI equation
-    real_t sum_Is_wi_Hx = real_t(0);
+    real_t sum_Is_wi_Hx = r::zero;
 
-    real_t sum_Is_wi_Hx_Hx = real_t(0);
-    real_t sum_Is_wi_Hy_Hx = real_t(0);
+    real_t sum_Is_wi_Hx_Hx = r::zero;
+    real_t sum_Is_wi_Hy_Hx = r::zero;
 
-    real_t sum_Is_wi_Hxx_Hx = real_t(0);
-    real_t sum_Is_wi_Hxy_Hx = real_t(0);
-    real_t sum_Is_wi_Hyy_Hx = real_t(0);
-
-    // from uyI equation
-    real_t sum_Is_wi_Hy = real_t(0);
-
-    real_t sum_Is_wi_Hx_Hy = real_t(0);
-    real_t sum_Is_wi_Hy_Hy = real_t(0);
-
-    real_t sum_Is_wi_Hxx_Hy = real_t(0);
-    real_t sum_Is_wi_Hxy_Hy = real_t(0);
-    real_t sum_Is_wi_Hyy_Hy = real_t(0);
+    real_t sum_Is_wi_Hxx_Hx = r::zero;
+    real_t sum_Is_wi_Hxy_Hx = r::zero;
+    real_t sum_Is_wi_Hyy_Hx = r::zero;
 
     // from mxxI equation
-    real_t sum_Is_wi_Hxx = real_t(0);
+    real_t sum_Is_wi_Hxx = r::zero;
 
-    real_t sum_Is_wi_Hx_Hxx = real_t(0);
-    real_t sum_Is_wi_Hy_Hxx = real_t(0);
+    real_t sum_Is_wi_Hx_Hxx = r::zero;
+    real_t sum_Is_wi_Hy_Hxx = r::zero;
 
-    real_t sum_Is_wi_Hxx_Hxx = real_t(0);
-    real_t sum_Is_wi_Hxy_Hxx = real_t(0);
-    real_t sum_Is_wi_Hyy_Hxx = real_t(0);
+    real_t sum_Is_wi_Hxx_Hxx = r::zero;
+    real_t sum_Is_wi_Hxy_Hxx = r::zero;
+    real_t sum_Is_wi_Hyy_Hxx = r::zero;
 
     // from mxyI equation
-    real_t sum_Is_wi_Hxy = real_t(0);
+    real_t sum_Is_wi_Hxy = r::zero;
 
-    real_t sum_Is_wi_Hx_Hxy = real_t(0);
-    real_t sum_Is_wi_Hy_Hxy = real_t(0);
+    real_t sum_Is_wi_Hx_Hxy = r::zero;
+    real_t sum_Is_wi_Hy_Hxy = r::zero;
 
-    real_t sum_Is_wi_Hxx_Hxy = real_t(0);
-    real_t sum_Is_wi_Hxy_Hxy = real_t(0);
-    real_t sum_Is_wi_Hyy_Hxy = real_t(0);
+    real_t sum_Is_wi_Hxx_Hxy = r::zero;
+    real_t sum_Is_wi_Hxy_Hxy = r::zero;
+    real_t sum_Is_wi_Hyy_Hxy = r::zero;
 
     // from myyI equation
-    real_t sum_Is_wi_Hyy = real_t(0);
+    real_t sum_Is_wi_Hyy = r::zero;
 
-    real_t sum_Is_wi_Hx_Hyy = real_t(0);
-    real_t sum_Is_wi_Hy_Hyy = real_t(0);
+    real_t sum_Is_wi_Hx_Hyy = r::zero;
+    real_t sum_Is_wi_Hy_Hyy = r::zero;
 
-    real_t sum_Is_wi_Hxx_Hyy = real_t(0);
-    real_t sum_Is_wi_Hxy_Hyy = real_t(0);
-    real_t sum_Is_wi_Hyy_Hyy = real_t(0);
+    real_t sum_Is_wi_Hxx_Hyy = r::zero;
+    real_t sum_Is_wi_Hxy_Hyy = r::zero;
+    real_t sum_Is_wi_Hyy_Hyy = r::zero;
+
+    real_t c, s, r;
+    polar_unit_vectors(x, y, c, s, r);
 
 #pragma unroll
     for (int i = 0; i < Stencil::Q; ++i)
     {
         real_t cx, cy, Hxx, Hxy, Hyy;
-        Stencil::basis2(i, cx, cy, Hxx, Hxy, Hyy);
+        Stencil::basis2polar(i, c, s, cx, cy, Hxx, Hxy, Hyy);
 
         const real_t Hx_factor = Stencil::w(i) * Stencil::as2 * cx;
         const real_t Hy_factor = Stencil::w(i) * Stencil::as2 * cy;
@@ -117,13 +112,6 @@ __device__ inline void evaluate_fluid_node(
             sum_Is_wi_Hxx_Hx += Hxx_factor * cx;
             sum_Is_wi_Hxy_Hx += Hxy_factor * cx;
             sum_Is_wi_Hyy_Hx += Hyy_factor * cx;
-
-            sum_Is_wi_Hy += Stencil::w(i) * cy;
-            sum_Is_wi_Hx_Hy += Hx_factor * cy;
-            sum_Is_wi_Hy_Hy += Hy_factor * cy;
-            sum_Is_wi_Hxx_Hy += Hxx_factor * cy;
-            sum_Is_wi_Hxy_Hy += Hxy_factor * cy;
-            sum_Is_wi_Hyy_Hy += Hyy_factor * cy;
 
             sum_Is_wi_Hxx += Stencil::w(i) * Hxx;
             sum_Is_wi_Hx_Hxx += Hx_factor * Hxx;
@@ -182,16 +170,32 @@ __device__ inline void evaluate_fluid_node(
     b_coeff[0] = ux_I * sum_Os_wi - sum_Is_wi_Hx;
 
     // uyI equation
-    A(1, 0) = sum_Is_wi_Hx_Hy - sum_Os_wi_Hx * uy_I;                                       // ux
-    A(1, 1) = sum_Is_wi_Hy_Hy - sum_Os_wi_Hy * uy_I;                                       // uy
-    A(1, 2) = -OMEGA * sum_Os_wi_Hxx * uy_I;                                               // ux ux
-    A(1, 3) = -real_t(2) * OMEGA * sum_Os_wi_Hxy * uy_I;                                   // ux uy
-    A(1, 4) = -OMEGA * sum_Os_wi_Hyy * uy_I;                                               // uy uy
-    A(1, 5) = sum_Is_wi_Hxx_Hy - (real_t(1) - OMEGA) * sum_Os_wi_Hxx * uy_I;               // mxx
-    A(1, 6) = real_t(2) * (sum_Is_wi_Hxy_Hy - (real_t(1) - OMEGA) * sum_Os_wi_Hxy * uy_I); // mxy
-    A(1, 7) = sum_Is_wi_Hyy_Hy - (real_t(1) - OMEGA) * sum_Os_wi_Hyy * uy_I;               // myy
+    if (r < (R_OUT + R_IN) * r::half)
+    {
+        A(1, 0) = r::zero;                            // ux
+        A(1, 1) = 1;                                  // uy
+        A(1, 2) = r::zero;                            // ux ux
+        A(1, 3) = -Stencil::as2 * OMEGA * (r - R_IN); // ux uy
+        A(1, 4) = r::zero;                            // uy uy
+        A(1, 5) = r::zero;                            // mxx
+        A(1, 6) = Stencil::as2 * OMEGA * (r - R_IN);  // mxy
+        A(1, 7) = r::zero;                            // myy
 
-    b_coeff[1] = uy_I * sum_Os_wi - sum_Is_wi_Hy;
+        b_coeff[1] = U_WALL;
+    }
+    else
+    {
+        A(1, 0) = r::zero;                             // ux
+        A(1, 1) = 1;                                   // uy
+        A(1, 2) = r::zero;                             // ux ux
+        A(1, 3) = Stencil::as2 * OMEGA * (R_OUT - r);  // ux uy
+        A(1, 4) = r::zero;                             // uy uy
+        A(1, 5) = r::zero;                             // mxx
+        A(1, 6) = -Stencil::as2 * OMEGA * (R_OUT - r); // mxy
+        A(1, 7) = r::zero;                             // myy
+
+        b_coeff[1] = r::zero;
+    }
 
     // mxxI equation
     A(2, 0) = sum_Is_wi_Hx_Hxx - sum_Os_wi_Hx * mxx_I;                                       // ux
@@ -285,4 +289,17 @@ __device__ inline void evaluate_fluid_node(
     real_t inv_rho_denom = real_t(1) / rho_denom;
 
     rho = rho_I * inv_rho_denom;
+
+    const real_t ur = ux;
+    const real_t ut = uy;
+    const real_t mrr = mxx;
+    const real_t mrt = mxy;
+    const real_t mtt = myy;
+
+    ux = ur * c - ut * s;
+    uy = ut * c + ur * s;
+
+    mxx = c * c * mrr - r::two * c * s * mrt + s * s * mtt;
+    mxy = c * s * mrr + (c * c - s * s) * mrt - c * s * mtt;
+    myy = s * s * mrr + r::two * c * s * mrt + c * c * mtt;
 }

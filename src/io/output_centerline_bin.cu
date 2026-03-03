@@ -18,16 +18,12 @@ namespace io
 
     void write_centerline_profiles(const LBMState &state, int t, const std::string &out_dir)
     {
-        // Ajuste se você preferir (NX-1)/2 etc.
         const int xc = NX / 2;
         const int yc = NY / 2;
 
-        // buffers em double para padronizar leitura no Python
         std::vector<real_t> ux_xc_y(NY);
         std::vector<real_t> uy_yc_x(NX);
 
-        // ATENÇÃO: aqui assume que state.h_ux e state.h_uy já são o campo macroscópico final no host
-        // e que o layout é linear idx = x + NX*y.
         for (int y = 0; y < NY; ++y)
         {
             const int idx = xc + NX * y;

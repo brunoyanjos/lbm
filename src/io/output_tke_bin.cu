@@ -15,23 +15,31 @@ namespace io
         return out_dir + "/outputs/tke.bin";
     }
 
-    real_t compute_ke_host_2d(const LBMState &state)
+    real_t compute_ke_host_2d(const LBMState &state, const uint8_t *h_node)
     {
-        real_t sum = 0.0;
+        real_t sum = real_t(0);
+        size_t n_active = 0;
 
-        for (int i = 0; i < int(state.N); ++i)
+        const uint8_t SOLID = to_u8(NodeId::SOLID);
+
+        for (size_t i = 0; i < state.N; ++i)
         {
+            if (h_node && h_node[i] == SOLID)
+                continue;
+
             const real_t ux = (real_t)state.h_ux[i] / Stencil::as2;
             const real_t uy = (real_t)state.h_uy[i] / Stencil::as2;
-            sum += 0.5 * (ux * ux + uy * uy);
+
+            sum += real_t(0.5) * (ux * ux + uy * uy);
+            ++n_active;
         }
 
-        real_t norm = state.N * U_LID * U_LID;
-        real_t inv_norm = real_t(1) / norm;
+        if (n_active == 0)
+            return real_t(0);
 
-        sum *= inv_norm;
-
-        return sum;
+        // normalização: média de KE adimensionalizada por U_WALL^2
+        const real_t inv_norm = real_t(1) / (real_t(n_active) * U_WALL * U_WALL);
+        return sum * inv_norm;
     }
 
     void tke_bin_append(const std::string &out_dir, int t, double ke)

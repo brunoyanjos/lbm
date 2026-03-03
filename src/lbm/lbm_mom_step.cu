@@ -2,15 +2,18 @@
 #include "stencil_active.cuh"
 #include "boundary/regularized_boundary_condition.cuh"
 #include "boundary/fluid_moment_evaluation.cuh"
+#include "boundary/fluid_boundary_evaluation.cuh"
 #include "collision/collision.cuh"
 #include "moment_evaluation/moment_evaluation.cuh"
 #include "moment_evaluation/moment_scaling.cuh"
 #include "state/state_store.cuh"
 #include "population/pop_reconstruction.cuh"
+#include "domain/active_geometry.cuh"
 
 #include "../core/geometry.h"
 #include "../core/physics.h"
 #include "../core/indexing.cuh"
+#include "../core/cuda_utils.cuh"
 #include "../core/cuda_utils.cuh"
 
 __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
@@ -23,8 +26,11 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
     const int c = S.cur;
     const int n = S.cur ^ 1;
 
-    const uint8_t wall_id = T.d_wall[idx];
+    const uint8_t wall_id = T.d_node[idx];
     const uint32_t valid_ms = T.d_valid[idx];
+
+    if (wall_id == to_u8(NodeId::SOLID))
+        return;
 
     real_t pop[Stencil::Q];
 
@@ -33,13 +39,9 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
 
     real_t rho, ux, uy, mxx, mxy, myy;
 
-    if (wall_id != static_cast<uint8_t>(WallId::NONE))
+    if (wall_id != static_cast<uint8_t>(NodeId::FLUID))
     {
-        ux = real_t(0);
-        uy = real_t(0);
-
-        if (wall_id == static_cast<uint8_t>(WallId::TOP))
-            ux = U_LID;
+        Geometry::bc_velocity(x, y, ux, uy);
 
         apply_boundary(pop, valid_ms, rho, ux, uy, mxx, mxy, myy);
     }
@@ -48,6 +50,17 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
         if (is_full_mask(valid_ms))
         {
             evaluate_moments_from_pop(pop, rho, ux, uy, mxx, mxy, myy);
+        }
+        else if (count_valid_dirs(valid_ms) < 8)
+        {
+            rho = S.d_rho[c][idxGlobal(x, y)] + RHO_0;
+            ux = S.d_ux[c][idxGlobal(x, y)] / Stencil::as2;
+            uy = S.d_uy[c][idxGlobal(x, y)] / Stencil::as2;
+            mxx = S.d_mxx[c][idxGlobal(x, y)] / (Stencil::as4 * real_t(0.5));
+            mxy = S.d_mxy[c][idxGlobal(x, y)] / Stencil::as4;
+            myy = S.d_myy[c][idxGlobal(x, y)] / (Stencil::as4 * real_t(0.5));
+
+            evaluate_fluid_boundary(pop, valid_ms, rho, ux, uy, mxx, mxy, myy, x, y);
         }
         else
         {

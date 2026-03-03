@@ -5,7 +5,7 @@ from pathlib import Path
 import struct
 import numpy as np
 
-from .formats import TKE_DTYPE, CLN_MAGIC
+from .formats import TKE_DTYPE, CLN_MAGIC, APR_MAGIC, APP_MAGIC
 
 
 def read_tke_bin(path: str | Path):
@@ -50,3 +50,69 @@ def read_centerline_bin(path: str | Path):
 
     meta = {"nx": nx, "ny": ny, "xc": xc, "yc": yc, "t": t}
     return meta, ux_xc_y, uy_yc_x
+
+
+def read_annul_profile_bin(path: str | Path):
+    """
+    Format APR1:
+
+      magic[4] = "APR1"
+      int32 n, t, y_line, x_start
+      float32 r[n]
+      float32 ur[n]
+      float32 utheta[n]
+
+    Returns:
+      meta dict, r (n), ur (n), utheta (n)
+    """
+    path = Path(path)
+
+    with path.open("rb") as f:
+        magic = f.read(4)
+        if magic != APR_MAGIC:
+            raise ValueError("Invalid annular profile file")
+
+        n, t, y_line, x_start = struct.unpack("<iiii", f.read(16))
+
+        r = np.frombuffer(f.read(4 * n), dtype="<f4").copy()
+        ur = np.frombuffer(f.read(4 * n), dtype="<f4").copy()
+        utheta = np.frombuffer(f.read(4 * n), dtype="<f4").copy()
+
+        leftover = f.read(1)
+        if leftover:
+            raise ValueError("Annular profile file has extra bytes")
+
+    meta = {"n": n, "t": t, "y_line": y_line, "x_start": x_start}
+    return meta, r, ur, utheta
+
+
+def read_annul_pressure_bin(path: str | Path):
+    """
+    Format APP1:
+
+      magic[4] = "APP1"
+      int32 n, t, y_line, x_start
+      float32 r[n]
+      float32 rho_prime[n]   (rho - rho0)
+
+    Returns:
+      meta dict, r (n), rho_prime (n)
+    """
+    path = Path(path)
+
+    with path.open("rb") as f:
+        magic = f.read(4)
+        if magic != APP_MAGIC:
+            raise ValueError("Invalid annular pressure file")
+
+        n, t, y_line, x_start = struct.unpack("<iiii", f.read(16))
+
+        r = np.frombuffer(f.read(4 * n), dtype="<f4").copy()
+        rho_p = np.frombuffer(f.read(4 * n), dtype="<f4").copy()
+
+        leftover = f.read(1)
+        if leftover:
+            raise ValueError("Annular pressure file has extra bytes")
+
+    meta = {"n": n, "t": t, "y_line": y_line, "x_start": x_start}
+    return meta, r, rho_p

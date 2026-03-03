@@ -8,12 +8,13 @@
 #include "../io/output_tags_vtk.cuh"
 #include "../io/output_tke_bin.cuh"
 #include "../io/output_centerline_bin.cuh"
+#include "../io/output_annul_profile_bin.cuh"
+#include "../io/output_annul_pressure_bin.cuh"
 
 #include "../lbm/state/lbm_state.cuh"
 #include "../lbm/lbm_init_state.cuh"
 #include "../lbm/lbm_mom_step.cuh"
-#include "../lbm/domain/cavity_square_tags.cuh"
-#include "../lbm/domain/tags_debug.cuh"
+#include "../lbm/domain/active_geometry.cuh"
 
 #include "../core/cuda_utils.cuh"
 #include "../core/simulation_config.h"
@@ -22,6 +23,10 @@
 #include <chrono>
 #include <iostream>
 
+#include "../core/indexing.cuh"
+#include "../lbm/domain/domain_tags.cuh"
+#include <cstdint>
+
 namespace app
 {
     void run(const CudaConfig &cfg, const RunContext &ctx)
@@ -29,14 +34,11 @@ namespace app
         auto state = lbm_allocate_state();
         init_state(state, cfg);
 
-        DomainTags tags = domain_tags_allocate(ctx.verbose);
-        build_cavity_square_tags(tags);
+        DomainTags tags = domain_tags_allocate();
+        Geometry::build_tags(tags);
 
         if (ctx.verbose)
         {
-            validate_cavity_square_tags_host(tags, true);
-
-            // evita misturar com a barra (stderr)
             if (ctx.show_progress)
                 progress::ProgressUI::suspend_for_log();
             io::write_tags_vtk(tags, ctx.out_dir);
@@ -85,7 +87,7 @@ namespace app
             {
                 upload_state_to_host(state);
 
-                const double ke = io::compute_ke_host_2d(state);
+                const double ke = io::compute_ke_host_2d(state, tags.h_node);
 
                 io::tke_bin_append(ctx.out_dir, t, ke);
                 io::write_vtk(state, cfg, t, ctx.out_dir);
@@ -117,7 +119,8 @@ namespace app
         if (ctx.enable_io)
         {
             upload_state_to_host(state);
-            io::write_centerline_profiles(state, t_end * U_LID / NX, ctx.out_dir);
+            io::write_annul_profile(state, t_end * U_WALL / NX, ctx.out_dir, tags);
+            io::write_annul_pressure(state, t_end, ctx.out_dir, tags);
         }
 
         const double gpu_s = gt.stop_seconds();

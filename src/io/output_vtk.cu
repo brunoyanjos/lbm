@@ -50,8 +50,38 @@ namespace io
             for (int x = 0; x < NX; ++x)
             {
                 const size_t idx = idxGlobal(x, y);
-                const real_t rho = S.h_rho[idx] + RHO_0; // h_rho stores (rho - RHO_0)
+                const real_t rho = S.h_rho[idx] + RHO_0;
                 file << static_cast<float>(rho) << "\n";
+            }
+        }
+
+        // --- VELOCITY ---
+        file << "SCALARS ux float 1\n";
+        file << "LOOKUP_TABLE default\n";
+        for (int y = 0; y < NY; ++y)
+        {
+            for (int x = 0; x < NX; ++x)
+            {
+                const size_t idx = idxGlobal(x, y);
+
+                const real_t ux = S.h_ux[idx] / Stencil::as2;
+
+                file << static_cast<float>(ux) << "\n";
+            }
+        }
+
+        // --- VELOCITY ---
+        file << "SCALARS uy float 1\n";
+        file << "LOOKUP_TABLE default\n";
+        for (int y = 0; y < NY; ++y)
+        {
+            for (int x = 0; x < NX; ++x)
+            {
+                const size_t idx = idxGlobal(x, y);
+
+                const real_t uy = S.h_uy[idx] / Stencil::as2;
+
+                file << static_cast<float>(uy) << "\n";
             }
         }
 

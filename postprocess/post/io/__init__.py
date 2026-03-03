@@ -6,4 +6,5 @@ __all__ = [
     "read_tke_bin",
     "read_centerline_bin",
     "read_stdout_summary",
+    "read_annul_profile_bin",
 ]
