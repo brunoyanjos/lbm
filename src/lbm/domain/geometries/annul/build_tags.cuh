@@ -5,5 +5,4 @@
 namespace ANNUL
 {
     void build_tags(DomainTags &T);
-
 }

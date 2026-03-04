@@ -1,8 +1,7 @@
 #include "lbm_init_state.cuh"
 #include <cuda_runtime.h>
 
-#include "../core/geometry.h"
-#include "../core/physics.h"
+#include "../core/active_geometry.cuh"
 #include "../core/indexing.cuh"
 #include "../core/cuda_utils.cuh"
 

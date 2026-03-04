@@ -20,7 +20,6 @@ __device__ __forceinline__ bool gaussianElimination(real_t *__restrict__ A,
 #pragma unroll
     for (int i = 0; i < N; ++i)
     {
-        // pivot parcial na coluna i
         int piv = i;
         real_t maxv = dabs(A[idx_flat<N>(i, i)]);
 
@@ -38,7 +37,6 @@ __device__ __forceinline__ bool gaussianElimination(real_t *__restrict__ A,
         if (maxv <= eps)
             return false;
 
-        // swap linhas (i <-> piv): só de i em diante
         if (piv != i)
         {
 #pragma unroll
@@ -57,7 +55,6 @@ __device__ __forceinline__ bool gaussianElimination(real_t *__restrict__ A,
 
         const real_t inv_piv = (real_t)1 / A[idx_flat<N>(i, i)];
 
-        // elimina abaixo
 #pragma unroll
         for (int r = i + 1; r < N; ++r)
         {

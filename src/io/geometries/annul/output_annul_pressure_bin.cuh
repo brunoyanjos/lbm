@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
-#include "../lbm/state/lbm_state.cuh"
-#include "../lbm/domain/domain_tags.cuh"
+#include "../../../lbm/state/lbm_state.cuh"
+#include "../../../lbm/domain/domain_tags.cuh"
 
 namespace io
 {

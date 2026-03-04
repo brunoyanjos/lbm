@@ -6,9 +6,8 @@
 #include <vector>
 #include <cmath>
 
-#include "../core/geometry.h"
-#include "../core/types.cuh"
-#include "../core/physics.h"
+#include "../../../core/active_geometry.cuh"
+#include "../../../core/types.cuh"
 
 namespace io
 {
@@ -39,19 +38,16 @@ namespace io
             const int idx = x + NX * y_line;
             const int idx_n = x + NX * (y_line - 1);
 
-            // filtra sólidos (ajuste se seu array/semântica for diferente)
             if (tags.h_node[idx] == to_u8(NodeId::SOLID))
                 continue;
             if (tags.h_node[idx_n] == to_u8(NodeId::SOLID))
                 continue;
 
-            // rho_p: aqui você está gravando rho "descontado" (rho - RHO_0),
-            // mantendo consistente com o teu state.h_rho.
-            // Se você quiser o rho absoluto no bin, é aqui que soma RHO_0.
             const real_t rho_p = (state.h_rho[idx] + state.h_rho[idx_n]) * r::half;
 
             const real_t dx = r_cast(x) - xc;
-            const real_t dy = r_cast(yc) - yc;
+            const real_t y_mid = (r_cast(y_line) + r_cast(y_line - 1)) * r::half;
+            const real_t dy = y_mid - yc;
 
             const real_t r2 = dx * dx + dy * dy;
             const real_t invr = rsqrt(r2 + real_t(1e-30));

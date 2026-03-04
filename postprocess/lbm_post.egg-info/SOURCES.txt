@@ -19,4 +19,7 @@ post/plots/__init__.py
 post/plots/annul_pressure.py
 post/plots/annul_profile.py
 post/plots/centerlines.py
+post/plots/channel_profile.py
+post/plots/couette_profile.py
+post/plots/jet.py
 post/plots/tke.py

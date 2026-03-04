@@ -1,6 +1,6 @@
 #pragma once
 #include "../../core/types.cuh"
-#include "../../core/physics.h"
+#include "../../core/active_geometry.cuh"
 
 __device__ void moment_space_collision(const real_t &ux, const real_t &uy,
                                        real_t &mxx, real_t &mxy, real_t &myy)

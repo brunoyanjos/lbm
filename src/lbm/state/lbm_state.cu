@@ -1,6 +1,6 @@
 #include "lbm_state.cuh"
 #include "../../core/cuda_utils.cuh"
-#include "../../core/geometry.h"
+#include "../../core/active_geometry.cuh"
 #include "../../core/indexing.cuh"
 #include "../../core/memory.cuh"
 

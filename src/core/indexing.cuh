@@ -1,6 +1,6 @@
 #pragma once
 
-#include "geometry.h"
+#include "active_geometry.cuh"
 #include <cstddef>
 #include <limits>
 

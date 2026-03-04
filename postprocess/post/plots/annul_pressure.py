@@ -50,8 +50,10 @@ def plot_annul_pressure(
     if nx <= 0:
         raise ValueError("sim_meta missing nx")
 
-    Rin = nx * 0.25
-    Rout = (nx - 1) * 0.5
+    # Rin = nx * 0.25
+    # Rout = (nx - 1) * 0.5
+    Rin = np.min(r)
+    Rout = np.max(r)
     gap = Rout - Rin
     if gap <= 0:
         raise ValueError("Invalid annular gap")
@@ -70,7 +72,7 @@ def plot_annul_pressure(
         raise ValueError("empty pressure profile (no fluid samples saved)")
 
     # trabalhar com Δp' removendo constante: referência = primeiro ponto disponível (menor r)
-    dp = p_prime
+    dp = p_prime - p_prime[0]
 
     # normalização: dp* = dp / (rho0 * U^2)
     denom = rho0 * (U * U)
@@ -88,6 +90,7 @@ def plot_annul_pressure(
         linewidth=1.6,
         marker="o",
         markersize=3.2,
+        markevery=max(1, len(r_star) // 25),
         label=r"$\Delta p^{*}$ (solver samples)",
         zorder=1,
     )

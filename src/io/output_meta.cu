@@ -2,8 +2,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
-#include "../core/physics.h"
-#include "../core/geometry.h"
+#include "../core/active_geometry.cuh"
 
 namespace io
 {

@@ -2,8 +2,7 @@
 #include <cuda_runtime.h>
 #include <iostream>
 
-#include "../core/geometry.h"
-#include "../core/physics.h"
+#include "../core/active_geometry.cuh"
 #include "../app/cuda_config.cuh"
 #include "../lbm/stencil_active.cuh"
 
@@ -40,7 +39,7 @@ inline void print_simulation_summary(const CudaConfig &cfg,
 
     // Physics / nondimensional
     std::cout << "Re                : " << RE << "\n";
-    std::cout << "U_lid             : " << U_WALL << "\n";
+    std::cout << "U_lid             : " << U_MAX << "\n";
     std::cout << "L_char            : " << L_CHAR << "\n";
     std::cout << "nu (visc)         : " << VISC << "\n";
     std::cout << "tau               : " << TAU << "\n";

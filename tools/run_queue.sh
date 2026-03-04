@@ -1,45 +1,77 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# (Opcional) Ajustes gerais de execução:
-export IO=1
-export RUN=1
-export CLEAN=0
-export DEBUG=0
-export RDC=0
-export PROGRESS=1
-export PROGRESS_HZ=2
-export WARMUP=100
-export REAL=float   # ou double se quiser
+# =====================================================
+# Exec defaults (override via env)
+# =====================================================
+: "${IO:=1}"
+: "${RUN:=1}"
+: "${CLEAN:=0}"
+: "${DEBUG:=0}"
+: "${RDC:=0}"
+: "${PROGRESS:=1}"
+: "${PROGRESS_HZ:=2}"
+: "${WARMUP:=100}"
+: "${REAL:=float}"
+: "${STENCIL:=D2Q9}"
+: "${ARCHES:=}"          # opcional: "86 89" etc
+: "${BUILD_ROOT:=build}" # opcional
+: "${OUT_ROOT:=runs}"    # opcional
 
-# Se quiser evitar que um caso sobrescreva build do outro, seu compile.sh já separa por STENCIL/REAL.
-# Só não misture REAL no meio sem querer.
+# =====================================================
+# Root discovery (script inside tools/)
+# =====================================================
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# =====================================================
+# One of each case (all D2Q9)
+# Pick Re values that make sense for each geometry in your solver.
+# You can adjust freely.
+# =====================================================
 cases=(
-  "D2Q9  3200"
-  "D2Q9 10000"
-  "D2V17 3200"
-  "D2V17 10000"
+  "square_cavity 3200"
+  "annul         25"
+  "channel       200"
+  "couette       200"
+  "jet           100"
 )
+
+echo "ROOT_DIR: ${ROOT_DIR}"
+echo "STENCIL=${STENCIL} REAL=${REAL}"
+echo "IO=${IO} WARMUP=${WARMUP} PROGRESS=${PROGRESS} PROGRESS_HZ=${PROGRESS_HZ}"
+echo
 
 for c in "${cases[@]}"; do
   set -- $c
-  stencil="$1"
+  geom="$1"
   re="$2"
 
   ts="$(date +%Y%m%d_%H%M%S)"
-  export STENCIL="$stencil"
-  export RE="$re"
-  export RUN_ID="${ts}_${stencil}_RE${re}"
+  run_id="${ts}_${STENCIL}_${REAL}_${geom}_RE${re}"
 
   echo "================================================="
-  echo "[CASE] STENCIL=${STENCIL}  RE=${RE}  RUN_ID=${RUN_ID}"
+  echo "[CASE] GEOM=${geom}  STENCIL=${STENCIL}  REAL=${REAL}  RE=${re}"
+  echo "       RUN_ID=${run_id}"
   echo "================================================="
 
-  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-
-  bash "${ROOT_DIR}/compile.sh"
+  bash "${ROOT_DIR}/compile.sh" \
+    --geom "${geom}" \
+    --stencil "${STENCIL}" \
+    --real "${REAL}" \
+    --re "${re}" \
+    --run "${RUN}" \
+    --clean "${CLEAN}" \
+    --debug "${DEBUG}" \
+    --rdc "${RDC}" \
+    --io "${IO}" \
+    --warmup "${WARMUP}" \
+    --progress "${PROGRESS}" \
+    --progress_hz "${PROGRESS_HZ}" \
+    --build_root "${BUILD_ROOT}" \
+    --out_root "${OUT_ROOT}" \
+    ${ARCHES:+--arches "${ARCHES}"} \
+    --run_id "${run_id}"
 
   echo
 done

@@ -43,8 +43,10 @@ def plot_annul_profile(
     if nx <= 0:
         raise ValueError("sim_meta missing nx")
 
-    Rin = nx * 0.25
-    Rout = (nx - 1) * 0.5
+    # Rin = nx * 0.25
+    # Rout = (nx - 1) * 0.5
+    Rin = np.min(r)
+    Rout = np.max(r)
     gap = Rout - Rin
     if gap <= 0:
         raise ValueError("Invalid annular gap computed from nx")
@@ -81,6 +83,7 @@ def plot_annul_profile(
         linewidth=1.6,
         marker="o",
         markersize=3.2,
+        markevery=max(1, len(r_star) // 25),
         label=r"$u_{\theta}/U_{\mathrm{wall}}$ (solver samples)",
         zorder=1,
     )

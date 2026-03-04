@@ -1,13 +1,13 @@
 #include "output_centerline_bin.cuh"
-#include "../lbm/stencil_active.cuh"
+#include "../../../lbm/stencil_active.cuh"
 
 #include <cstdint>
 #include <fstream>
 #include <string>
 #include <vector>
 
-#include "../core/geometry.h"
-#include "../core/types.cuh"
+#include "../../../core/active_geometry.cuh"
+#include "../../../core/types.cuh"
 
 namespace io
 {

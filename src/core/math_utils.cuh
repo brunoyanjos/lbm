@@ -2,6 +2,7 @@
 #include <type_traits>
 #include <cmath>
 #include "types.cuh"
+#include "active_geometry.cuh"
 
 template <typename T>
 __host__ __device__ __forceinline__ T dsqrt(T x)

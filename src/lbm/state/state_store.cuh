@@ -2,7 +2,7 @@
 
 #include "../../core/types.cuh"
 #include "lbm_state.cuh"
-#include "../../core/physics.h"
+#include "../../core/active_geometry.cuh"
 
 __device__ __forceinline__ void store_next_state(const LBMState &S,
                                                  int n,

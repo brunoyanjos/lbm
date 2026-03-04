@@ -3,7 +3,7 @@
 #include "../../core/types.cuh"
 #include "../../core/linear_solver.cuh"
 #include "../domain/mask_utils.cuh"
-#include "../../core/physics.h"
+#include "../../core/active_geometry.cuh"
 #include "../../core/math_utils.cuh"
 #include <cstdint>
 
@@ -170,32 +170,32 @@ __device__ inline void evaluate_fluid_boundary(
     b_coeff[0] = ux_I * sum_Os_wi - sum_Is_wi_Hx;
 
     // uyI equation
-    if (r < (R_OUT + R_IN) * r::half)
-    {
-        A(1, 0) = r::zero;                            // ux
-        A(1, 1) = 1;                                  // uy
-        A(1, 2) = r::zero;                            // ux ux
-        A(1, 3) = -Stencil::as2 * OMEGA * (r - R_IN); // ux uy
-        A(1, 4) = r::zero;                            // uy uy
-        A(1, 5) = r::zero;                            // mxx
-        A(1, 6) = Stencil::as2 * OMEGA * (r - R_IN);  // mxy
-        A(1, 7) = r::zero;                            // myy
+    // if (r < (R_OUT + R_IN) * r::half)
+    // {
+    //     A(1, 0) = r::zero;                            // ux
+    //     A(1, 1) = 1;                                  // uy
+    //     A(1, 2) = r::zero;                            // ux ux
+    //     A(1, 3) = -Stencil::as2 * OMEGA * (r - R_IN); // ux uy
+    //     A(1, 4) = r::zero;                            // uy uy
+    //     A(1, 5) = r::zero;                            // mxx
+    //     A(1, 6) = Stencil::as2 * OMEGA * (r - R_IN);  // mxy
+    //     A(1, 7) = r::zero;                            // myy
 
-        b_coeff[1] = U_WALL;
-    }
-    else
-    {
-        A(1, 0) = r::zero;                             // ux
-        A(1, 1) = 1;                                   // uy
-        A(1, 2) = r::zero;                             // ux ux
-        A(1, 3) = Stencil::as2 * OMEGA * (R_OUT - r);  // ux uy
-        A(1, 4) = r::zero;                             // uy uy
-        A(1, 5) = r::zero;                             // mxx
-        A(1, 6) = -Stencil::as2 * OMEGA * (R_OUT - r); // mxy
-        A(1, 7) = r::zero;                             // myy
+    //     b_coeff[1] = U_MAX;
+    // }
+    // else
+    // {
+    //     A(1, 0) = r::zero;                             // ux
+    //     A(1, 1) = 1;                                   // uy
+    //     A(1, 2) = r::zero;                             // ux ux
+    //     A(1, 3) = Stencil::as2 * OMEGA * (R_OUT - r);  // ux uy
+    //     A(1, 4) = r::zero;                             // uy uy
+    //     A(1, 5) = r::zero;                             // mxx
+    //     A(1, 6) = -Stencil::as2 * OMEGA * (R_OUT - r); // mxy
+    //     A(1, 7) = r::zero;                             // myy
 
-        b_coeff[1] = r::zero;
-    }
+    //     b_coeff[1] = r::zero;
+    // }
 
     // mxxI equation
     A(2, 0) = sum_Is_wi_Hx_Hxx - sum_Os_wi_Hx * mxx_I;                                       // ux

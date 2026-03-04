@@ -1,6 +1,6 @@
 #include "output_tags_vtk.cuh"
 
-#include "../core/geometry.h"
+#include "../core/active_geometry.cuh"
 #include "../core/indexing.cuh"
 #include "../lbm/stencil_active.cuh"
 

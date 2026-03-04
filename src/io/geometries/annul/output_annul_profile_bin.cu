@@ -1,5 +1,5 @@
 #include "output_annul_profile_bin.cuh"
-#include "../lbm/stencil_active.cuh"
+#include "../../../lbm/stencil_active.cuh"
 
 #include <cstdint>
 #include <fstream>
@@ -8,9 +8,8 @@
 #include <cmath>
 #include <iostream>
 
-#include "../core/geometry.h"
-#include "../core/types.cuh"
-#include "../core/physics.h" // R_IN, R_OUT, U_WALL, etc
+#include "../../../core/active_geometry.cuh"
+#include "../../../core/types.cuh"
 
 namespace io
 {
@@ -51,8 +50,6 @@ namespace io
             const int idx = x + NX * y_line;
             const int idx_n = x + NX * (y_line - 1);
 
-            std::cout << x << " " << (tags.h_node[idx] == to_u8(NodeId::SOLID)) << std::endl;
-
             if (tags.h_node[idx] == to_u8(NodeId::SOLID))
                 continue;
 
@@ -63,7 +60,8 @@ namespace io
             const real_t uy = (state.h_uy[idx] / Stencil::as2 + state.h_uy[idx_n] / Stencil::as2) * r::half;
 
             const real_t dx = r_cast(x) - xc;
-            const real_t dy = yc - yc;
+            const real_t y_mid = (r_cast(y_line) + r_cast(y_line - 1)) * r::half;
+            const real_t dy = y_mid - yc;
 
             const real_t r2 = dx * dx + dy * dy;
             const real_t invr = rsqrt(r2 + real_t(1e-30));

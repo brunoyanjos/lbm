@@ -3,7 +3,7 @@
 #include "../../core/types.cuh"
 #include "../../core/linear_solver.cuh"
 #include "../domain/mask_utils.cuh"
-#include "../../core/physics.h"
+#include "../../core/active_geometry.cuh"
 #include <cstdint>
 
 __device__ inline void evaluate_fluid_node(

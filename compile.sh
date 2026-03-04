@@ -10,6 +10,7 @@ set -euo pipefail
 : "${CLEAN:=0}"
 : "${DEBUG:=0}"
 : "${EXEC_NAME:=sim}"
+: "${GEOM:=square_cavity}"
 : "${IO:=1}"
 : "${MAXRREGCOUNT:=0}"
 : "${OUT_ROOT:=runs}"
@@ -52,11 +53,71 @@ make_gencodes() {
 }
 
 # =====================================================
+# Parse CLI args (optional)
+# =====================================================
+# Mantém compatível com o uso por env vars, mas permite:
+#   ./compile.sh --geom annul --stencil D2Q9 --real double --clean 1 --run 0 ...
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --geom|-g)        GEOM="$2"; shift 2 ;;
+    --stencil)        STENCIL="$2"; shift 2 ;;
+    --real)           REAL="$2"; shift 2 ;;
+    --re)             RE="$2"; shift 2 ;;
+    --run)            RUN="$2"; shift 2 ;;
+    --clean)          CLEAN="$2"; shift 2 ;;
+    --debug)          DEBUG="$2"; shift 2 ;;
+    --rdc)            RDC="$2"; shift 2 ;;
+    --arches)         ARCHES="$2"; shift 2 ;;
+    --exec)           EXEC_NAME="$2"; shift 2 ;;
+    --build_root)     BUILD_ROOT="$2"; shift 2 ;;
+    --out_root)       OUT_ROOT="$2"; shift 2 ;;
+    --run_id)         RUN_ID="$2"; shift 2 ;;
+    --io)             IO="$2"; shift 2 ;;
+    --warmup)         WARMUP="$2"; shift 2 ;;
+    --verbose)        VERBOSE="$2"; shift 2 ;;
+    --progress)       PROGRESS="$2"; shift 2 ;;
+    --progress_hz)    PROGRESS_HZ="$2"; shift 2 ;;
+    --ptxas_verbose)  PTXAS_VERBOSE="$2"; shift 2 ;;
+    --maxrregcount)   MAXRREGCOUNT="$2"; shift 2 ;;
+    -h|--help)
+      cat <<EOF
+Usage:
+  GEOM=square_cavity STENCIL=D2Q9 REAL=float ./compile.sh
+  ./compile.sh --geom annul --stencil D2Q9 --real float --run 1
+
+Valid:
+  --geom: annul | channel | couette | jet | square_cavity
+  --stencil: D2Q9 | D2V17
+  --real: float | double
+EOF
+      exit 0
+      ;;
+    *)
+      die "Unknown argument: '$1' (use --help)"
+      ;;
+  esac
+done
+
+# =====================================================
 # Validate
 # =====================================================
 
 case "${STENCIL}" in D2Q9|D2V17) ;; *) die "Unknown STENCIL='${STENCIL}'" ;; esac
 case "${REAL}" in float|double) ;; *) die "Unknown REAL='${REAL}'" ;; esac
+case "${GEOM}" in annul|channel|couette|jet|square_cavity) ;; *) die "Unknown GEOM='${GEOM}'" ;; esac
+
+# =====================================================
+# GEOM -> macro
+# =====================================================
+
+GEOM_DEF=""
+case "${GEOM}" in
+  annul)         GEOM_DEF="-DLBM_GEOM_ANNUL" ;;
+  channel)       GEOM_DEF="-DLBM_GEOM_CHANNEL" ;;
+  couette)       GEOM_DEF="-DLBM_GEOM_COUETTE" ;;
+  jet)           GEOM_DEF="-DLBM_GEOM_JET" ;;
+  square_cavity) GEOM_DEF="-DLBM_GEOM_SQUARE_CAVITY" ;;
+esac
 
 # =====================================================
 # ARCHES
@@ -70,13 +131,13 @@ mapfile -t GENCODES < <(make_gencodes "${ARCHES}")
 # Build dirs
 # =====================================================
 
-CFG_TAG="${STENCIL}_${REAL}"
+CFG_TAG="${STENCIL}_${REAL}_${GEOM}"
 BUILD_DIR="${BUILD_ROOT}/${CFG_TAG}"
 OBJ_DIR="${BUILD_DIR}/obj"
 BIN_PATH="${BUILD_DIR}/${EXEC_NAME}"
 
 echo "ARCHES: ${ARCHES}"
-echo "STENCIL=${STENCIL} REAL=${REAL}"
+echo "STENCIL=${STENCIL} REAL=${REAL} GEOM=${GEOM}"
 echo "DEBUG=${DEBUG} RDC=${RDC} CLEAN=${CLEAN}"
 echo "BUILD_DIR: ${BUILD_DIR}"
 
@@ -107,16 +168,22 @@ else
   NVCCFLAGS+=(-rdc=false)
 fi
 
+# stencil macro
 if [[ "${STENCIL}" == "D2Q9" ]]; then
   NVCCFLAGS+=(-DLBM_STENCIL_D2Q9)
 else
   NVCCFLAGS+=(-DLBM_STENCIL_D2V17)
 fi
 
+# geometry macro (NOVO)
+NVCCFLAGS+=("${GEOM_DEF}")
+
+# RE macro (se você usa isso em compile-time)
 if [[ -n "${RE}" ]]; then
   NVCCFLAGS+=(-DLBM_RE="${RE}")
 fi
 
+# real macro
 if [[ "${REAL}" == "double" ]]; then
   NVCCFLAGS+=(-DREAL_T_IS_DOUBLE)
 fi
@@ -174,7 +241,7 @@ echo "✔ Build successful: ${BIN_PATH}"
 
 if [[ "${RUN}" == "1" ]]; then
   if [[ -z "${RUN_ID}" ]]; then
-    RUN_ID="$(date +%Y%m%d_%H%M%S)"
+    RUN_ID="$(date +%Y%m%d_%H%M%S)_${STENCIL}_${REAL}_${GEOM}${RE:+_RE${RE}}"
   fi
 
   OUT_DIR="${OUT_ROOT}/${RUN_ID}"

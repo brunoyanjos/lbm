@@ -6,7 +6,9 @@ enum class NodeId : uint8_t
 {
     FLUID = 0,
     SOLID = 1,
-    DIRICHLET = 2
+    DIRICHLET = 2,
+    INLET = 3,
+    OUTLET = 4,
 };
 
 struct DomainTags

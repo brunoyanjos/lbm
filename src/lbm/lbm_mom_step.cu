@@ -10,8 +10,7 @@
 #include "population/pop_reconstruction.cuh"
 #include "domain/active_geometry.cuh"
 
-#include "../core/geometry.h"
-#include "../core/physics.h"
+#include "../core/active_geometry.cuh"
 #include "../core/indexing.cuh"
 #include "../core/cuda_utils.cuh"
 #include "../core/cuda_utils.cuh"
@@ -43,36 +42,27 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
     {
         Geometry::bc_velocity(x, y, ux, uy);
 
-        apply_boundary(pop, valid_ms, rho, ux, uy, mxx, mxy, myy);
+        if (wall_id == to_u8(NodeId::DIRICHLET))
+        {
+            apply_boundary_dirichlet(pop, valid_ms, rho, ux, uy, mxx, mxy, myy);
+        }
+        else if (wall_id == to_u8(NodeId::INLET))
+        {
+            apply_boundary_inlet(pop, valid_ms, rho, ux, uy, mxx, mxy, myy);
+        }
+        else if (wall_id == to_u8(NodeId::OUTLET))
+        {
+            real_t adj_pop[Stencil::Q];
+
+            reconstruct_streamed_pop(adj_pop, S, c, x - 1, y);
+            evaluate_moments_from_pop(adj_pop, rho, ux, uy, mxx, mxy, myy);
+
+            apply_boundary_outlet(pop, valid_ms, rho, ux, uy, mxx, mxy, myy);
+        }
     }
     else
     {
-        if (is_full_mask(valid_ms))
-        {
-            evaluate_moments_from_pop(pop, rho, ux, uy, mxx, mxy, myy);
-        }
-        else if (count_valid_dirs(valid_ms) < 8)
-        {
-            rho = S.d_rho[c][idxGlobal(x, y)] + RHO_0;
-            ux = S.d_ux[c][idxGlobal(x, y)] / Stencil::as2;
-            uy = S.d_uy[c][idxGlobal(x, y)] / Stencil::as2;
-            mxx = S.d_mxx[c][idxGlobal(x, y)] / (Stencil::as4 * real_t(0.5));
-            mxy = S.d_mxy[c][idxGlobal(x, y)] / Stencil::as4;
-            myy = S.d_myy[c][idxGlobal(x, y)] / (Stencil::as4 * real_t(0.5));
-
-            evaluate_fluid_boundary(pop, valid_ms, rho, ux, uy, mxx, mxy, myy, x, y);
-        }
-        else
-        {
-            rho = S.d_rho[c][idxGlobal(x, y)] + RHO_0;
-            ux = S.d_ux[c][idxGlobal(x, y)] / Stencil::as2;
-            uy = S.d_uy[c][idxGlobal(x, y)] / Stencil::as2;
-            mxx = S.d_mxx[c][idxGlobal(x, y)] / (Stencil::as4 * real_t(0.5));
-            mxy = S.d_mxy[c][idxGlobal(x, y)] / Stencil::as4;
-            myy = S.d_myy[c][idxGlobal(x, y)] / (Stencil::as4 * real_t(0.5));
-
-            evaluate_fluid_node(pop, valid_ms, rho, ux, uy, mxx, mxy, myy);
-        }
+        evaluate_moments_from_pop(pop, rho, ux, uy, mxx, mxy, myy);
     }
 
     // 3) scale to the stored basis

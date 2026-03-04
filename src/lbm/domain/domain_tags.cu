@@ -1,5 +1,5 @@
 #include "domain_tags.cuh"
-#include "../../core/geometry.h"
+#include "../../core/active_geometry.cuh"
 #include "../../core/cuda_utils.cuh"
 
 DomainTags domain_tags_allocate()

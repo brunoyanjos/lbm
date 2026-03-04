@@ -1,6 +1,6 @@
 #pragma once
 #include "../../core/types.cuh"
-#include "../../core/physics.h"
+#include "../../core/active_geometry.cuh"
 #include "../../core/math_utils.cuh"
 #include "../../core/linear_solver.cuh"
 #include "../stencil_active.cuh"
@@ -9,44 +9,62 @@
 #include <cstdint>
 #include <cstdio>
 
-__device__ __forceinline__ void apply_boundary(
+__device__ __forceinline__ void apply_boundary_dirichlet(
     real_t *__restrict__ pop,
     uint32_t valid_mask,
     real_t &rho,
-    real_t ux_bc, real_t uy_bc,
+    real_t ux, real_t uy,
     real_t &mxx, real_t &mxy, real_t &myy)
 {
     const uint32_t outgoing_mask = valid_mask;
     const uint32_t incoming_mask = mask_opp(valid_mask);
 
     // soma das válidas
-    real_t rho_I = real_t(0);
+    real_t rho_I = r::zero;
 
-    real_t mxx_I = real_t(0);
-    real_t mxy_I = real_t(0);
-    real_t myy_I = real_t(0);
+    real_t mxx_I = r::zero;
+    real_t mxy_I = r::zero;
+    real_t myy_I = r::zero;
 
-    real_t A = real_t(0);
+    // from rhoI equation
+    real_t sum_Os_wi = r::zero;
 
-    real_t Bxx = real_t(0);
-    real_t Bxy = real_t(0);
-    real_t Byy = real_t(0);
+    real_t sum_Os_wi_Hx = r::zero;
+    real_t sum_Os_wi_Hy = r::zero;
 
-    real_t A_Hxx = real_t(0);
-    real_t A_Hxy = real_t(0);
-    real_t A_Hyy = real_t(0);
+    real_t sum_Os_wi_Hxx = r::zero;
+    real_t sum_Os_wi_Hxy = r::zero;
+    real_t sum_Os_wi_Hyy = r::zero;
 
-    real_t Bxx_Hxx = real_t(0);
-    real_t Bxx_Hxy = real_t(0);
-    real_t Bxx_Hyy = real_t(0);
+    // from mxxI equation
+    real_t sum_Is_wi_Hxx = r::zero;
 
-    real_t Bxy_Hxx = real_t(0);
-    real_t Bxy_Hxy = real_t(0);
-    real_t Bxy_Hyy = real_t(0);
+    real_t sum_Is_wi_Hx_Hxx = r::zero;
+    real_t sum_Is_wi_Hy_Hxx = r::zero;
 
-    real_t Byy_Hxx = real_t(0);
-    real_t Byy_Hxy = real_t(0);
-    real_t Byy_Hyy = real_t(0);
+    real_t sum_Is_wi_Hxx_Hxx = r::zero;
+    real_t sum_Is_wi_Hxy_Hxx = r::zero;
+    real_t sum_Is_wi_Hyy_Hxx = r::zero;
+
+    // from mxyI equation
+    real_t sum_Is_wi_Hxy = r::zero;
+
+    real_t sum_Is_wi_Hx_Hxy = r::zero;
+    real_t sum_Is_wi_Hy_Hxy = r::zero;
+
+    real_t sum_Is_wi_Hxx_Hxy = r::zero;
+    real_t sum_Is_wi_Hxy_Hxy = r::zero;
+    real_t sum_Is_wi_Hyy_Hxy = r::zero;
+
+    // from myyI equation
+    real_t sum_Is_wi_Hyy = r::zero;
+
+    real_t sum_Is_wi_Hx_Hyy = r::zero;
+    real_t sum_Is_wi_Hy_Hyy = r::zero;
+
+    real_t sum_Is_wi_Hxx_Hyy = r::zero;
+    real_t sum_Is_wi_Hxy_Hyy = r::zero;
+    real_t sum_Is_wi_Hyy_Hyy = r::zero;
 
 #pragma unroll
     for (int i = 0; i < Stencil::Q; ++i)
@@ -54,10 +72,12 @@ __device__ __forceinline__ void apply_boundary(
         real_t cx, cy, Hxx, Hxy, Hyy;
         Stencil::basis2(i, cx, cy, Hxx, Hxy, Hyy);
 
-        const real_t A_i = Stencil::w(i) * (real_t(1) + Stencil::as2 * ux_bc * cx + Stencil::as2 * uy_bc * cy);
-        const real_t Bxx_i = Stencil::w(i) * Stencil::as4 * real_t(0.5) * Hxx;
-        const real_t Bxy_i = Stencil::w(i) * Stencil::as4 * real_t(0.5) * Hxy;
-        const real_t Byy_i = Stencil::w(i) * Stencil::as4 * real_t(0.5) * Hyy;
+        const real_t Hx_factor = Stencil::w(i) * Stencil::as2 * cx;
+        const real_t Hy_factor = Stencil::w(i) * Stencil::as2 * cy;
+
+        const real_t Hxx_factor = Stencil::w(i) * Stencil::as4 * r::half * Hxx;
+        const real_t Hxy_factor = Stencil::w(i) * Stencil::as4 * r::half * Hxy;
+        const real_t Hyy_factor = Stencil::w(i) * Stencil::as4 * r::half * Hyy;
 
         if (dir_valid(incoming_mask, i))
         {
@@ -67,30 +87,36 @@ __device__ __forceinline__ void apply_boundary(
             mxy_I += pop[i] * Hxy;
             myy_I += pop[i] * Hyy;
 
-            A_Hxx += A_i * Hxx;
-            A_Hxy += A_i * Hxy;
-            A_Hyy += A_i * Hyy;
+            sum_Is_wi_Hxx += Stencil::w(i) * Hxx;
+            sum_Is_wi_Hx_Hxx += Hx_factor * Hxx;
+            sum_Is_wi_Hy_Hxx += Hy_factor * Hxx;
+            sum_Is_wi_Hxx_Hxx += Hxx_factor * Hxx;
+            sum_Is_wi_Hxy_Hxx += Hxy_factor * Hxx;
+            sum_Is_wi_Hyy_Hxx += Hyy_factor * Hxx;
 
-            Bxx_Hxx += Bxx_i * Hxx;
-            Bxy_Hxx += Bxy_i * Hxx;
-            Byy_Hxx += Byy_i * Hxx;
+            sum_Is_wi_Hxy += Stencil::w(i) * Hxy;
+            sum_Is_wi_Hx_Hxy += Hx_factor * Hxy;
+            sum_Is_wi_Hy_Hxy += Hy_factor * Hxy;
+            sum_Is_wi_Hxx_Hxy += Hxx_factor * Hxy;
+            sum_Is_wi_Hxy_Hxy += Hxy_factor * Hxy;
+            sum_Is_wi_Hyy_Hxy += Hyy_factor * Hxy;
 
-            Bxx_Hxy += Bxx_i * Hxy;
-            Bxy_Hxy += Bxy_i * Hxy;
-            Byy_Hxy += Byy_i * Hxy;
-
-            Bxx_Hyy += Bxx_i * Hyy;
-            Bxy_Hyy += Bxy_i * Hyy;
-            Byy_Hyy += Byy_i * Hyy;
+            sum_Is_wi_Hyy += Stencil::w(i) * Hyy;
+            sum_Is_wi_Hx_Hyy += Hx_factor * Hyy;
+            sum_Is_wi_Hy_Hyy += Hy_factor * Hyy;
+            sum_Is_wi_Hxx_Hyy += Hxx_factor * Hyy;
+            sum_Is_wi_Hxy_Hyy += Hxy_factor * Hyy;
+            sum_Is_wi_Hyy_Hyy += Hyy_factor * Hyy;
         }
 
         if (dir_valid(outgoing_mask, i))
         {
-            A += A_i;
-
-            Bxx += Bxx_i;
-            Bxy += Bxy_i;
-            Byy += Byy_i;
+            sum_Os_wi += Stencil::w(i);
+            sum_Os_wi_Hx += Hx_factor;
+            sum_Os_wi_Hy += Hy_factor;
+            sum_Os_wi_Hxx += Hxx_factor;
+            sum_Os_wi_Hxy += Hxy_factor;
+            sum_Os_wi_Hyy += Hyy_factor;
         }
     }
 
@@ -100,65 +126,351 @@ __device__ __forceinline__ void apply_boundary(
     mxy_I *= inv_rho_I;
     myy_I *= inv_rho_I;
 
-    const real_t u_sum = ux_bc * ux_bc * Bxx +
-                         real_t(2) * ux_bc * uy_bc * Bxy +
-                         uy_bc * uy_bc * Byy;
-
     constexpr int Nsys = 3;
 
-    real_t Uflat[Nsys * Nsys]{};
+    real_t Aflat[Nsys * Nsys]{};
 
-    real_t d[Nsys]{};
+    real_t b[Nsys]{};
     real_t m[Nsys]{};
 
-    auto U = [&](int r, int c) -> real_t &
-    { return Uflat[r * Nsys + c]; };
+    auto A = [&](int r, int c) -> real_t &
+    { return Aflat[r * Nsys + c]; };
 
     // mxx
-    U(0, 0) = (real_t(1) - OMEGA) * Bxx * mxx_I - Bxx_Hxx;
-    U(0, 1) = real_t(2) * ((real_t(1) - OMEGA) * Bxy * mxx_I - Bxy_Hxx);
-    U(0, 2) = (real_t(1) - OMEGA) * Byy * mxx_I - Byy_Hxx;
-    d[0] = A_Hxx - (A + OMEGA * u_sum) * mxx_I;
+    A(0, 0) = sum_Is_wi_Hxx_Hxx - (r::one - OMEGA) * sum_Os_wi_Hxx * mxx_I;
+    A(0, 1) = r::two * (sum_Is_wi_Hxy_Hxx - (r::one - OMEGA) * sum_Os_wi_Hxy * mxx_I);
+    A(0, 2) = sum_Is_wi_Hyy_Hxx - (r::one - OMEGA) * sum_Os_wi_Hyy * mxx_I;
+    b[0] = sum_Os_wi * mxx_I - sum_Is_wi_Hxx +
+           ux * (sum_Os_wi_Hx * mxx_I - sum_Is_wi_Hx_Hxx) + uy * (sum_Os_wi_Hy * mxx_I - sum_Is_wi_Hy_Hxx) +
+           OMEGA * ux * ux * sum_Os_wi_Hxx * mxx_I +
+           r::two * OMEGA * ux * uy * sum_Os_wi_Hxy * mxx_I +
+           OMEGA * uy * uy * sum_Os_wi_Hyy * mxx_I;
 
     // mxy
-    U(1, 0) = (real_t(1) - OMEGA) * Bxx * mxy_I - Bxx_Hxy;
-    U(1, 1) = real_t(2) * ((real_t(1) - OMEGA) * Bxy * mxy_I - Bxy_Hxy);
-    U(1, 2) = (real_t(1) - OMEGA) * Byy * mxy_I - Byy_Hxy;
-    d[1] = A_Hxy - (A + OMEGA * u_sum) * mxy_I;
+    A(1, 0) = sum_Is_wi_Hxx_Hxy - (r::one - OMEGA) * sum_Os_wi_Hxx * mxy_I;
+    A(1, 1) = r::two * (sum_Is_wi_Hxy_Hxy - (r::one - OMEGA) * sum_Os_wi_Hxy * mxy_I);
+    A(1, 2) = sum_Is_wi_Hyy_Hxy - (r::one - OMEGA) * sum_Os_wi_Hyy * mxy_I;
+    b[1] = sum_Os_wi * mxy_I - sum_Is_wi_Hxy +
+           ux * (sum_Os_wi_Hx * mxy_I - sum_Is_wi_Hx_Hxy) + uy * (sum_Os_wi_Hy * mxy_I - sum_Is_wi_Hy_Hxy) +
+           OMEGA * ux * ux * sum_Os_wi_Hxx * mxy_I +
+           r::two * OMEGA * ux * uy * sum_Os_wi_Hxy * mxy_I +
+           OMEGA * uy * uy * sum_Os_wi_Hyy * mxy_I;
 
     // myy
-    U(2, 0) = (real_t(1) - OMEGA) * Bxx * myy_I - Bxx_Hyy;
-    U(2, 1) = real_t(2) * ((real_t(1) - OMEGA) * Bxy * myy_I - Bxy_Hyy);
-    U(2, 2) = (real_t(1) - OMEGA) * Byy * myy_I - Byy_Hyy;
-    d[2] = A_Hyy - (A + OMEGA * u_sum) * myy_I;
+    A(2, 0) = sum_Is_wi_Hxx_Hyy - (r::one - OMEGA) * sum_Os_wi_Hxx * myy_I;
+    A(2, 1) = r::two * (sum_Is_wi_Hxy_Hyy - (r::one - OMEGA) * sum_Os_wi_Hxy * myy_I);
+    A(2, 2) = sum_Is_wi_Hyy_Hyy - (r::one - OMEGA) * sum_Os_wi_Hyy * myy_I;
+    b[2] = sum_Os_wi * myy_I - sum_Is_wi_Hyy +
+           ux * (sum_Os_wi_Hx * myy_I - sum_Is_wi_Hx_Hyy) + uy * (sum_Os_wi_Hy * myy_I - sum_Is_wi_Hy_Hyy) +
+           OMEGA * ux * ux * sum_Os_wi_Hxx * myy_I +
+           r::two * OMEGA * ux * uy * sum_Os_wi_Hyy * myy_I +
+           OMEGA * uy * uy * sum_Os_wi_Hyy * myy_I;
 
-    gaussianElimination<3>(Uflat, d, m);
+    gaussianElimination<3>(Aflat, b, m);
 
     mxx = m[0];
     mxy = m[1];
     myy = m[2];
 
-    // Uflat é row-major: U(r,c) = Uflat[r*3+c]
-    // const real_t a11 = Uflat[0], a12 = Uflat[1], a13 = Uflat[2];
-    // const real_t a21 = Uflat[3], a22 = Uflat[4], a23 = Uflat[5];
-    // const real_t a31 = Uflat[6], a32 = Uflat[7], a33 = Uflat[8];
-
-    // const real_t b1 = d[0], b2 = d[1], b3 = d[2];
-
-    // const real_t den =
-    //     a13 * a22 * a31 - a12 * a23 * a31 - a13 * a21 * a32 + a11 * a23 * a32 + a12 * a21 * a33 - a11 * a22 * a33;
-
-    // const real_t inv_den = real_t(1) / den;
-
-    // // exatamente como no código que você mandou (atenção ao sinal de mxy)
-    // mxx = (a23 * a32 * b1 - a22 * a33 * b1 - a13 * a32 * b2 + a12 * a33 * b2 + a13 * a22 * b3 - a12 * a23 * b3) * inv_den;
-    // mxy = -(a23 * a31 * b1 - a21 * a33 * b1 - a13 * a31 * b2 + a11 * a33 * b2 + a13 * a21 * b3 - a11 * a23 * b3) * inv_den;
-    // myy = (a22 * a31 * b1 - a21 * a32 * b1 - a12 * a31 * b2 + a11 * a32 * b2 + a12 * a21 * b3 - a11 * a22 * b3) * inv_den;
-
-    const real_t mom_sum = mxx * Bxx + real_t(2) * mxy * Bxy + myy * Byy;
-
-    const real_t rho_denominator = A + (real_t(1) - OMEGA) * mom_sum + OMEGA * u_sum;
+    const real_t rho_denominator = sum_Os_wi +
+                                   sum_Os_wi_Hx * ux + sum_Os_wi_Hy * uy +
+                                   (r::one - OMEGA) * sum_Os_wi_Hxx * mxx + r::two * (r::one - OMEGA) * sum_Os_wi_Hxy * mxy + (r::one - OMEGA) * sum_Os_wi_Hyy * myy +
+                                   OMEGA * sum_Os_wi_Hxx * ux * ux + r::two * OMEGA * sum_Os_wi_Hxy * ux * uy + OMEGA * sum_Os_wi_Hyy * uy * uy;
     const real_t inv_rho = real_t(1) / rho_denominator;
 
     rho = rho_I * inv_rho;
+}
+
+__device__ __forceinline__ void apply_boundary_inlet(
+    real_t *__restrict__ pop,
+    uint32_t valid_mask,
+    real_t &rho,
+    real_t ux, real_t uy,
+    real_t &mxx, real_t &mxy, real_t &myy)
+{
+    const uint32_t incoming_mask = mask_opp(valid_mask);
+
+    // soma das válidas
+    real_t rho_I = r::zero;
+
+    real_t mxx_I = r::zero;
+    real_t mxy_I = r::zero;
+    real_t myy_I = r::zero;
+
+    // from rhoI equation
+    real_t sum_Is_wi = r::zero;
+
+    real_t sum_Is_wi_Hx = r::zero;
+    real_t sum_Is_wi_Hy = r::zero;
+
+    // from mxxI equation
+    real_t sum_Is_wi_Hxx = r::zero;
+
+    real_t sum_Is_wi_Hx_Hxx = r::zero;
+    real_t sum_Is_wi_Hy_Hxx = r::zero;
+
+    real_t sum_Is_wi_Hxx_Hxx = r::zero;
+    real_t sum_Is_wi_Hxy_Hxx = r::zero;
+    real_t sum_Is_wi_Hyy_Hxx = r::zero;
+
+    // from mxyI equation
+    real_t sum_Is_wi_Hxy = r::zero;
+
+    real_t sum_Is_wi_Hx_Hxy = r::zero;
+    real_t sum_Is_wi_Hy_Hxy = r::zero;
+
+    real_t sum_Is_wi_Hxx_Hxy = r::zero;
+    real_t sum_Is_wi_Hxy_Hxy = r::zero;
+    real_t sum_Is_wi_Hyy_Hxy = r::zero;
+
+    // from myyI equation
+    real_t sum_Is_wi_Hyy = r::zero;
+
+    real_t sum_Is_wi_Hx_Hyy = r::zero;
+    real_t sum_Is_wi_Hy_Hyy = r::zero;
+
+    real_t sum_Is_wi_Hxx_Hyy = r::zero;
+    real_t sum_Is_wi_Hxy_Hyy = r::zero;
+    real_t sum_Is_wi_Hyy_Hyy = r::zero;
+
+#pragma unroll
+    for (int i = 0; i < Stencil::Q; ++i)
+    {
+        real_t cx, cy, Hxx, Hxy, Hyy;
+        Stencil::basis2(i, cx, cy, Hxx, Hxy, Hyy);
+
+        const real_t Hx_factor = Stencil::w(i) * Stencil::as2 * cx;
+        const real_t Hy_factor = Stencil::w(i) * Stencil::as2 * cy;
+
+        const real_t Hxx_factor = Stencil::w(i) * Stencil::as4 * r::half * Hxx;
+        const real_t Hxy_factor = Stencil::w(i) * Stencil::as4 * r::half * Hxy;
+        const real_t Hyy_factor = Stencil::w(i) * Stencil::as4 * r::half * Hyy;
+
+        if (dir_valid(incoming_mask, i))
+        {
+            rho_I += pop[i];
+
+            mxx_I += pop[i] * Hxx;
+            mxy_I += pop[i] * Hxy;
+            myy_I += pop[i] * Hyy;
+
+            sum_Is_wi += Stencil::w(i);
+
+            sum_Is_wi_Hx += Hx_factor;
+            sum_Is_wi_Hy += Hy_factor;
+
+            sum_Is_wi_Hxx += Stencil::w(i) * Hxx;
+            sum_Is_wi_Hx_Hxx += Hx_factor * Hxx;
+            sum_Is_wi_Hy_Hxx += Hy_factor * Hxx;
+            sum_Is_wi_Hxx_Hxx += Hxx_factor * Hxx;
+            sum_Is_wi_Hxy_Hxx += Hxy_factor * Hxx;
+            sum_Is_wi_Hyy_Hxx += Hyy_factor * Hxx;
+
+            sum_Is_wi_Hxy += Stencil::w(i) * Hxy;
+            sum_Is_wi_Hx_Hxy += Hx_factor * Hxy;
+            sum_Is_wi_Hy_Hxy += Hy_factor * Hxy;
+            sum_Is_wi_Hxx_Hxy += Hxx_factor * Hxy;
+            sum_Is_wi_Hxy_Hxy += Hxy_factor * Hxy;
+            sum_Is_wi_Hyy_Hxy += Hyy_factor * Hxy;
+
+            sum_Is_wi_Hyy += Stencil::w(i) * Hyy;
+            sum_Is_wi_Hx_Hyy += Hx_factor * Hyy;
+            sum_Is_wi_Hy_Hyy += Hy_factor * Hyy;
+            sum_Is_wi_Hxx_Hyy += Hxx_factor * Hyy;
+            sum_Is_wi_Hxy_Hyy += Hxy_factor * Hyy;
+            sum_Is_wi_Hyy_Hyy += Hyy_factor * Hyy;
+        }
+    }
+
+    const real_t inv_rho_I = real_t(1) / rho_I;
+
+    mxx_I *= inv_rho_I;
+    mxy_I *= inv_rho_I;
+    myy_I *= inv_rho_I;
+
+    constexpr int Nsys = 3;
+
+    real_t Aflat[Nsys * Nsys]{};
+
+    real_t b[Nsys]{};
+    real_t m[Nsys]{};
+
+    auto A = [&](int r, int c) -> real_t &
+    { return Aflat[r * Nsys + c]; };
+
+    // mxx
+    A(0, 0) = sum_Is_wi_Hxx_Hxx - Stencil::as4 * r::half * sum_Is_wi_Hxx * mxx_I;
+    A(0, 1) = r::two * (sum_Is_wi_Hxy_Hxx - Stencil::as4 * r::half * sum_Is_wi_Hxy * mxx_I);
+    A(0, 2) = sum_Is_wi_Hyy_Hxx - Stencil::as4 * r::half * sum_Is_wi_Hyy * mxx_I;
+    b[0] = sum_Is_wi * mxx_I - sum_Is_wi_Hxx +
+           ux * (sum_Is_wi_Hx * mxx_I - sum_Is_wi_Hx_Hxx) +
+           uy * (sum_Is_wi_Hy * mxx_I - sum_Is_wi_Hy_Hxx);
+
+    // mxy
+    A(1, 0) = sum_Is_wi_Hxx_Hxx - Stencil::as4 * r::half * sum_Is_wi_Hxx * mxx_I;
+    A(1, 1) = r::two * (sum_Is_wi_Hxy_Hxx - Stencil::as4 * r::half * sum_Is_wi_Hxy * mxx_I);
+    A(1, 2) = sum_Is_wi_Hyy_Hxx - Stencil::as4 * r::half * sum_Is_wi_Hyy * mxx_I;
+    b[1] = sum_Is_wi * mxy_I - sum_Is_wi_Hxy +
+           ux * (sum_Is_wi_Hx * mxy_I - sum_Is_wi_Hx_Hxy) +
+           uy * (sum_Is_wi_Hy * mxy_I - sum_Is_wi_Hy_Hxy);
+
+    // myy
+    A(2, 0) = sum_Is_wi_Hxx_Hxx - Stencil::as4 * r::half * sum_Is_wi_Hxx * mxx_I;
+    A(2, 1) = r::two * (sum_Is_wi_Hxy_Hxx - Stencil::as4 * r::half * sum_Is_wi_Hxy * mxx_I);
+    A(2, 2) = sum_Is_wi_Hyy_Hxx - Stencil::as4 * r::half * sum_Is_wi_Hyy * mxx_I;
+    b[2] = sum_Is_wi * myy_I - sum_Is_wi_Hyy +
+           ux * (sum_Is_wi_Hx * myy_I - sum_Is_wi_Hx_Hyy) +
+           uy * (sum_Is_wi_Hy * myy_I - sum_Is_wi_Hy_Hyy);
+
+    gaussianElimination<3>(Aflat, b, m);
+
+    mxx = m[0];
+    mxy = m[1];
+    myy = m[2];
+
+    const real_t rho_denominator = sum_Is_wi +
+                                   sum_Is_wi_Hx * ux + sum_Is_wi_Hy * uy +
+                                   Stencil::as2 * r::half * sum_Is_wi_Hxx * mxx +
+                                   Stencil::as2 * sum_Is_wi_Hxy * mxy +
+                                   Stencil::as2 * r::half * sum_Is_wi_Hyy * myy;
+
+    const real_t inv_rho = real_t(1) / rho_denominator;
+
+    rho = rho_I * inv_rho;
+}
+
+__device__ __forceinline__ void apply_boundary_outlet(
+    real_t *__restrict__ pop,
+    uint32_t valid_mask,
+    real_t rho,
+    real_t ux, real_t uy,
+    real_t &mxx, real_t &mxy, real_t &myy)
+{
+    const uint32_t incoming_mask = mask_opp(valid_mask);
+
+    // soma das válidas
+    real_t rho_I = r::zero;
+
+    real_t mxx_I = r::zero;
+    real_t mxy_I = r::zero;
+    real_t myy_I = r::zero;
+
+    // from mxxI equation
+    real_t sum_Is_wi_Hxx = r::zero;
+
+    real_t sum_Is_wi_Hx_Hxx = r::zero;
+    real_t sum_Is_wi_Hy_Hxx = r::zero;
+
+    real_t sum_Is_wi_Hxx_Hxx = r::zero;
+    real_t sum_Is_wi_Hxy_Hxx = r::zero;
+    real_t sum_Is_wi_Hyy_Hxx = r::zero;
+
+    // from mxyI equation
+    real_t sum_Is_wi_Hxy = r::zero;
+
+    real_t sum_Is_wi_Hx_Hxy = r::zero;
+    real_t sum_Is_wi_Hy_Hxy = r::zero;
+
+    real_t sum_Is_wi_Hxx_Hxy = r::zero;
+    real_t sum_Is_wi_Hxy_Hxy = r::zero;
+    real_t sum_Is_wi_Hyy_Hxy = r::zero;
+
+    // from myyI equation
+    real_t sum_Is_wi_Hyy = r::zero;
+
+    real_t sum_Is_wi_Hx_Hyy = r::zero;
+    real_t sum_Is_wi_Hy_Hyy = r::zero;
+
+    real_t sum_Is_wi_Hxx_Hyy = r::zero;
+    real_t sum_Is_wi_Hxy_Hyy = r::zero;
+    real_t sum_Is_wi_Hyy_Hyy = r::zero;
+
+#pragma unroll
+    for (int i = 0; i < Stencil::Q; ++i)
+    {
+        real_t cx, cy, Hxx, Hxy, Hyy;
+        Stencil::basis2(i, cx, cy, Hxx, Hxy, Hyy);
+
+        const real_t Hx_factor = Stencil::w(i) * Stencil::as2 * cx;
+        const real_t Hy_factor = Stencil::w(i) * Stencil::as2 * cy;
+
+        const real_t Hxx_factor = Stencil::w(i) * Stencil::as4 * r::half * Hxx;
+        const real_t Hxy_factor = Stencil::w(i) * Stencil::as4 * r::half * Hxy;
+        const real_t Hyy_factor = Stencil::w(i) * Stencil::as4 * r::half * Hyy;
+
+        if (dir_valid(incoming_mask, i))
+        {
+            rho_I += pop[i];
+
+            mxx_I += pop[i] * Hxx;
+            mxy_I += pop[i] * Hxy;
+            myy_I += pop[i] * Hyy;
+
+            sum_Is_wi_Hxx += Stencil::w(i) * Hxx;
+            sum_Is_wi_Hx_Hxx += Hx_factor * Hxx;
+            sum_Is_wi_Hy_Hxx += Hy_factor * Hxx;
+            sum_Is_wi_Hxx_Hxx += Hxx_factor * Hxx;
+            sum_Is_wi_Hxy_Hxx += Hxy_factor * Hxx;
+            sum_Is_wi_Hyy_Hxx += Hyy_factor * Hxx;
+
+            sum_Is_wi_Hxy += Stencil::w(i) * Hxy;
+            sum_Is_wi_Hx_Hxy += Hx_factor * Hxy;
+            sum_Is_wi_Hy_Hxy += Hy_factor * Hxy;
+            sum_Is_wi_Hxx_Hxy += Hxx_factor * Hxy;
+            sum_Is_wi_Hxy_Hxy += Hxy_factor * Hxy;
+            sum_Is_wi_Hyy_Hxy += Hyy_factor * Hxy;
+
+            sum_Is_wi_Hyy += Stencil::w(i) * Hyy;
+            sum_Is_wi_Hx_Hyy += Hx_factor * Hyy;
+            sum_Is_wi_Hy_Hyy += Hy_factor * Hyy;
+            sum_Is_wi_Hxx_Hyy += Hxx_factor * Hyy;
+            sum_Is_wi_Hxy_Hyy += Hxy_factor * Hyy;
+            sum_Is_wi_Hyy_Hyy += Hyy_factor * Hyy;
+        }
+    }
+
+    const real_t inv_rho_I = real_t(1) / rho_I;
+
+    mxx_I *= inv_rho_I;
+    mxy_I *= inv_rho_I;
+    myy_I *= inv_rho_I;
+
+    constexpr int Nsys = 3;
+
+    real_t Aflat[Nsys * Nsys]{};
+
+    real_t b[Nsys]{};
+    real_t m[Nsys]{};
+
+    auto A = [&](int r, int c) -> real_t &
+    { return Aflat[r * Nsys + c]; };
+
+    const real_t inv_rho = r::one / rho;
+
+    // mxx
+    A(0, 0) = sum_Is_wi_Hxx_Hxx;
+    A(0, 1) = r::two * sum_Is_wi_Hxy_Hxx;
+    A(0, 2) = sum_Is_wi_Hyy_Hxx;
+    b[0] = rho_I * inv_rho * mxx_I - sum_Is_wi_Hxx -
+           ux * sum_Is_wi_Hx_Hxx - uy * sum_Is_wi_Hy_Hxx;
+
+    // mxy
+    A(1, 0) = sum_Is_wi_Hxx_Hxy;
+    A(1, 1) = r::two * sum_Is_wi_Hxy_Hxy;
+    A(1, 2) = sum_Is_wi_Hyy_Hxy;
+    b[1] = rho_I * inv_rho * mxy_I - sum_Is_wi_Hxy -
+           ux * sum_Is_wi_Hx_Hxy - uy * sum_Is_wi_Hy_Hxy;
+
+    // myy
+    A(2, 0) = sum_Is_wi_Hxx_Hyy;
+    A(2, 1) = r::two * sum_Is_wi_Hxy_Hyy;
+    A(2, 2) = sum_Is_wi_Hyy_Hyy;
+    b[2] = rho_I * inv_rho * myy_I - sum_Is_wi_Hyy -
+           ux * sum_Is_wi_Hx_Hyy - uy * sum_Is_wi_Hy_Hyy;
+
+    gaussianElimination<3>(Aflat, b, m);
+
+    mxx = m[0];
+    mxy = m[1];
+    myy = m[2];
 }

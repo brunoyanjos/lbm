@@ -1,8 +1,8 @@
 #pragma once
 #include "../../domain_tags.cuh"
 #include "../../../../core/types.cuh"
-#include "../../../../core/physics.h"
-#include "../../../../core/geometry.h"
+#include "../../../../core/geometries/annul/geometry.h"
+#include "../../../../core/geometries/annul/physics.h"
 #include "../../../../core/math_utils.cuh"
 
 namespace ANNUL
@@ -20,7 +20,7 @@ namespace ANNUL
 
         if (dr <= tol)
         {
-            const real_t utheta = U_WALL;
+            const real_t utheta = U_MAX;
             ux = -utheta * s;
             uy = utheta * c;
         }

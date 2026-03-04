@@ -7,9 +7,7 @@
 #include "../io/output_vtk.cuh"
 #include "../io/output_tags_vtk.cuh"
 #include "../io/output_tke_bin.cuh"
-#include "../io/output_centerline_bin.cuh"
-#include "../io/output_annul_profile_bin.cuh"
-#include "../io/output_annul_pressure_bin.cuh"
+#include "../io/geometry_outputs.cuh"
 
 #include "../lbm/state/lbm_state.cuh"
 #include "../lbm/lbm_init_state.cuh"
@@ -18,7 +16,7 @@
 
 #include "../core/cuda_utils.cuh"
 #include "../core/simulation_config.h"
-#include "../core/geometry.h"
+#include "../core/active_geometry.cuh"
 
 #include <chrono>
 #include <iostream>
@@ -119,8 +117,7 @@ namespace app
         if (ctx.enable_io)
         {
             upload_state_to_host(state);
-            io::write_annul_profile(state, t_end * U_WALL / NX, ctx.out_dir, tags);
-            io::write_annul_pressure(state, t_end, ctx.out_dir, tags);
+            io::geometry_final_outputs(state, cfg, t_end, ctx.out_dir, tags);
         }
 
         const double gpu_s = gt.stop_seconds();

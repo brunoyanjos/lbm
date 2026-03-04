@@ -1,10 +1,12 @@
-#include "annul.cuh"
+#include "build_tags.cuh"
 
-#include "../../../../core/geometry.h"
+#if defined(LBM_GEOM_ANNUL)
+
 #include "../../../../core/math_utils.cuh"
 #include "../../../../core/indexing.cuh"
 #include "../../../../core/cuda_utils.cuh"
-#include "../../../../core/physics.h"
+#include "../../../../core/geometries/annul/geometry.h"
+#include "../../../../core/geometries/annul/physics.h"
 #include "../../../../core/math_utils.cuh"
 #include "../../../stencil_active.cuh"
 #include "../../mask_utils.cuh"
@@ -113,8 +115,8 @@ namespace ANNUL
         annul_tags_kernel<<<grid, block>>>(T.d_node);
         CUDA_CHECK(cudaGetLastError());
 
-        // annul_tags_boundary_kernel<<<grid, block>>>(T.d_node);
-        // CUDA_CHECK(cudaGetLastError());
+        annul_tags_boundary_kernel<<<grid, block>>>(T.d_node);
+        CUDA_CHECK(cudaGetLastError());
 
         init_valid_dirs<<<grid, block>>>(T.d_node, T.d_valid);
         CUDA_CHECK(cudaGetLastError());
@@ -125,26 +127,6 @@ namespace ANNUL
             CUDA_CHECK(cudaMemcpy(T.h_node, T.d_node, T.bytes_node, cudaMemcpyDeviceToHost));
         }
     }
-
-    __device__ void bc_velocity(int x, int y,
-                                real_t &ux,
-                                real_t &uy)
-    {
-        ux = r::zero;
-        uy = r::zero;
-
-        real_t c, s, r;
-        polar_unit_vectors(x, y, c, s, r);
-
-        const real_t tol = real_t(1.5);
-        const real_t dr = r_abs(r - R_IN);
-
-        if (dr <= tol)
-        {
-            const real_t utheta = U_WALL;
-
-            ux = -utheta * s;
-            uy = utheta * c;
-        }
-    }
 }
+
+#endif

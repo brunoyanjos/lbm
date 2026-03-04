@@ -1,6 +1,6 @@
 #include "output_tke_bin.cuh"
 
-#include "../core/physics.h"
+#include "../core/active_geometry.cuh"
 #include "../core/simulation_config.h"
 #include "../lbm/stencil_active.cuh"
 
@@ -37,8 +37,8 @@ namespace io
         if (n_active == 0)
             return real_t(0);
 
-        // normalização: média de KE adimensionalizada por U_WALL^2
-        const real_t inv_norm = real_t(1) / (real_t(n_active) * U_WALL * U_WALL);
+        // normalização: média de KE adimensionalizada por U_MAX^2
+        const real_t inv_norm = real_t(1) / (real_t(n_active) * U_MAX * U_MAX);
         return sum * inv_norm;
     }
 

@@ -1,7 +1,7 @@
 #pragma once
 #include "../../domain_tags.cuh"
 
-namespace LDC
+namespace COUETTE
 {
     void build_tags(DomainTags &T);
 }
