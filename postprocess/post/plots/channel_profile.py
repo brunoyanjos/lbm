@@ -53,16 +53,7 @@ def plot_channel_profile(
         raise ValueError("invalid channel height (ny-1 must be > 0)")
     y_star = y / H
 
-    # velocidade de referência:
-    # - tenta U_in (canal)
-    # - fallback U_lid (se você reaproveitar logs)
-    # - fallback 1.0
-    U = sim_meta.get("U_in", None)
-    if U is None:
-        U = sim_meta.get("U_lid", None)
-    if U is None or float(U) == 0.0:
-        U = 1.0
-    U = float(U)
+    U = float(np.max(ux_y))
 
     # Normalização
     if normalize:

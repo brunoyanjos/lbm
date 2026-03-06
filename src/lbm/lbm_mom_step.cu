@@ -62,7 +62,32 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
     }
     else
     {
-        evaluate_moments_from_pop(pop, rho, ux, uy, mxx, mxy, myy);
+        if (is_full_mask(valid_ms))
+        {
+            evaluate_moments_from_pop(pop, rho, ux, uy, mxx, mxy, myy);
+        }
+        else if (count_valid_dirs(valid_ms) < 8)
+        {
+            rho = S.d_rho[c][idx] + RHO_0;
+            ux = S.d_ux[c][idx] / Stencil::as2;
+            uy = S.d_uy[c][idx] / Stencil::as2;
+            mxx = S.d_mxx[c][idx] / (Stencil::as4 * r::half);
+            mxy = S.d_mxy[c][idx] / Stencil::as4;
+            myy = S.d_myy[c][idx] / (Stencil::as4 * r::half);
+
+            evaluate_fluid_boundary(pop, valid_ms, rho, ux, uy, mxx, mxy, myy, x, y);
+        }
+        else
+        {
+            rho = S.d_rho[c][idx] + RHO_0;
+            ux = S.d_ux[c][idx] / Stencil::as2;
+            uy = S.d_uy[c][idx] / Stencil::as2;
+            mxx = S.d_mxx[c][idx] / (Stencil::as4 * r::half);
+            mxy = S.d_mxy[c][idx] / Stencil::as4;
+            myy = S.d_myy[c][idx] / (Stencil::as4 * r::half);
+
+            evaluate_fluid_node(pop, valid_ms, rho, ux, uy, mxx, mxy, myy);
+        }
     }
 
     // 3) scale to the stored basis

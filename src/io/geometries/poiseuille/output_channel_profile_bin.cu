@@ -22,7 +22,7 @@ namespace io
     void write_channel_profile(const LBMState &state, int t, const std::string &out_dir, const DomainTags &tags)
     {
         // seção “desenvolvida”
-        const int x_sample = (3 * NX) / 4;
+        const int x_sample = NX / 2;
 
         std::vector<float> ux_y;
         ux_y.resize(NY);

@@ -4,7 +4,7 @@
     !defined(LBM_GEOM_ANNUL) && !defined(LBM_GEOM_CHANNEL) && \
     !defined(LBM_GEOM_COUETTE) && !defined(LBM_GEOM_JET) &&   \
     !defined(LBM_GEOM_SQUARE_CAVITY)
-#define LBM_GEOM_SQUARE_CAVITY 1
+#define LBM_GEOM_ANNUL 1
 #endif
 
 #if (defined(LBM_GEOM_ANNUL) + defined(LBM_GEOM_CHANNEL) + defined(LBM_GEOM_COUETTE) + \

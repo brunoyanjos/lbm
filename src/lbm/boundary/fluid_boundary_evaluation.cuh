@@ -7,6 +7,16 @@
 #include "../../core/math_utils.cuh"
 #include <cstdint>
 
+#define STRONG_CONSERVATION_UX 0
+#define STRONG_CONSERVATION_UY 0
+
+#define EQUATION_ON_MXY 1
+
+#define MXX_INCOMPRESSIBLE 1
+#define MYY_INCOMPRESSIBLE 1
+
+#define MXX_MINUS_MYY_INCOMPRESSIBLE 0
+
 __device__ inline void evaluate_fluid_boundary(
     real_t *__restrict__ pop,
     uint32_t valid_mask,
@@ -21,7 +31,6 @@ __device__ inline void evaluate_fluid_boundary(
     real_t A_coeff[40]{};
     real_t b_coeff[5]{};
 
-    // incoming moments
     real_t rho_I = r::zero;
 
     real_t ux_I = r::zero;
@@ -31,55 +40,17 @@ __device__ inline void evaluate_fluid_boundary(
     real_t mxy_I = r::zero;
     real_t myy_I = r::zero;
 
-    // from rho equation
-    real_t sum_Os_wi = r::zero;
+    real_t A_rho[9]{};
 
-    real_t sum_Os_wi_Hx = r::zero;
-    real_t sum_Os_wi_Hy = r::zero;
+    // real_t A_ux[6]{};
+    // real_t A_uy[6]{};
 
-    real_t sum_Os_wi_Hxx = r::zero;
-    real_t sum_Os_wi_Hxy = r::zero;
-    real_t sum_Os_wi_Hyy = r::zero;
+    real_t A_ux[9]{};
+    real_t A_uy[9]{};
 
-    // from uxI equation
-    real_t sum_Is_wi_Hx = r::zero;
-
-    real_t sum_Is_wi_Hx_Hx = r::zero;
-    real_t sum_Is_wi_Hy_Hx = r::zero;
-
-    real_t sum_Is_wi_Hxx_Hx = r::zero;
-    real_t sum_Is_wi_Hxy_Hx = r::zero;
-    real_t sum_Is_wi_Hyy_Hx = r::zero;
-
-    // from mxxI equation
-    real_t sum_Is_wi_Hxx = r::zero;
-
-    real_t sum_Is_wi_Hx_Hxx = r::zero;
-    real_t sum_Is_wi_Hy_Hxx = r::zero;
-
-    real_t sum_Is_wi_Hxx_Hxx = r::zero;
-    real_t sum_Is_wi_Hxy_Hxx = r::zero;
-    real_t sum_Is_wi_Hyy_Hxx = r::zero;
-
-    // from mxyI equation
-    real_t sum_Is_wi_Hxy = r::zero;
-
-    real_t sum_Is_wi_Hx_Hxy = r::zero;
-    real_t sum_Is_wi_Hy_Hxy = r::zero;
-
-    real_t sum_Is_wi_Hxx_Hxy = r::zero;
-    real_t sum_Is_wi_Hxy_Hxy = r::zero;
-    real_t sum_Is_wi_Hyy_Hxy = r::zero;
-
-    // from myyI equation
-    real_t sum_Is_wi_Hyy = r::zero;
-
-    real_t sum_Is_wi_Hx_Hyy = r::zero;
-    real_t sum_Is_wi_Hy_Hyy = r::zero;
-
-    real_t sum_Is_wi_Hxx_Hyy = r::zero;
-    real_t sum_Is_wi_Hxy_Hyy = r::zero;
-    real_t sum_Is_wi_Hyy_Hyy = r::zero;
+    real_t A_mxx[6]{};
+    real_t A_mxy[6]{};
+    real_t A_myy[6]{};
 
     real_t c, s, r;
     polar_unit_vectors(x, y, c, s, r);
@@ -90,12 +61,13 @@ __device__ inline void evaluate_fluid_boundary(
         real_t cx, cy, Hxx, Hxy, Hyy;
         Stencil::basis2polar(i, c, s, cx, cy, Hxx, Hxy, Hyy);
 
-        const real_t Hx_factor = Stencil::w(i) * Stencil::as2 * cx;
-        const real_t Hy_factor = Stencil::w(i) * Stencil::as2 * cy;
-
-        const real_t Hxx_factor = Stencil::w(i) * Stencil::as4 * real_t(0.5) * Hxx;
-        const real_t Hxy_factor = Stencil::w(i) * Stencil::as4 * real_t(0.5) * Hxy;
-        const real_t Hyy_factor = Stencil::w(i) * Stencil::as4 * real_t(0.5) * Hyy;
+        const real_t factors[6] = {
+            Stencil::w(i),
+            Stencil::as2 * Stencil::w(i) * cx,
+            Stencil::as2 * Stencil::w(i) * cy,
+            Stencil::as4 * r::half * Stencil::w(i) * Hxx,
+            Stencil::as4 * Stencil::w(i) * Hxy,
+            Stencil::as4 * r::half * Stencil::w(i) * Hyy};
 
         if (dir_valid(incoming_mask, i))
         {
@@ -106,43 +78,58 @@ __device__ inline void evaluate_fluid_boundary(
             mxy_I += pop[i] * Hxy;
             myy_I += pop[i] * Hyy;
 
-            sum_Is_wi_Hx += Stencil::w(i) * cx;
-            sum_Is_wi_Hx_Hx += Hx_factor * cx;
-            sum_Is_wi_Hy_Hx += Hy_factor * cx;
-            sum_Is_wi_Hxx_Hx += Hxx_factor * cx;
-            sum_Is_wi_Hxy_Hx += Hxy_factor * cx;
-            sum_Is_wi_Hyy_Hx += Hyy_factor * cx;
+#pragma unroll
+            for (int j = 0; j < 6; ++j)
+            {
+#if !STRONG_CONSERVATION_UX
+                A_ux[j] += factors[j] * cx;
+#endif
 
-            sum_Is_wi_Hxx += Stencil::w(i) * Hxx;
-            sum_Is_wi_Hx_Hxx += Hx_factor * Hxx;
-            sum_Is_wi_Hy_Hxx += Hy_factor * Hxx;
-            sum_Is_wi_Hxx_Hxx += Hxx_factor * Hxx;
-            sum_Is_wi_Hxy_Hxx += Hxy_factor * Hxx;
-            sum_Is_wi_Hyy_Hxx += Hyy_factor * Hxx;
+#if !STRONG_CONSERVATION_UY
+                A_uy[j] += factors[j] * cy;
+#endif
 
-            sum_Is_wi_Hxy += Stencil::w(i) * Hxy;
-            sum_Is_wi_Hx_Hxy += Hx_factor * Hxy;
-            sum_Is_wi_Hy_Hxy += Hy_factor * Hxy;
-            sum_Is_wi_Hxx_Hxy += Hxx_factor * Hxy;
-            sum_Is_wi_Hxy_Hxy += Hxy_factor * Hxy;
-            sum_Is_wi_Hyy_Hxy += Hyy_factor * Hxy;
-
-            sum_Is_wi_Hyy += Stencil::w(i) * Hyy;
-            sum_Is_wi_Hx_Hyy += Hx_factor * Hyy;
-            sum_Is_wi_Hy_Hyy += Hy_factor * Hyy;
-            sum_Is_wi_Hxx_Hyy += Hxx_factor * Hyy;
-            sum_Is_wi_Hxy_Hyy += Hxy_factor * Hyy;
-            sum_Is_wi_Hyy_Hyy += Hyy_factor * Hyy;
+                A_mxx[j] += factors[j] * Hxx;
+                A_mxy[j] += factors[j] * Hxy;
+                A_myy[j] += factors[j] * Hyy;
+            }
         }
 
         if (dir_valid(outgoing_mask, i))
         {
-            sum_Os_wi += Stencil::w(i);
-            sum_Os_wi_Hx += Hx_factor;
-            sum_Os_wi_Hy += Hy_factor;
-            sum_Os_wi_Hxx += Hxx_factor;
-            sum_Os_wi_Hxy += Hxy_factor;
-            sum_Os_wi_Hyy += Hyy_factor;
+            A_rho[0] += factors[0];
+            A_rho[1] += factors[1];
+            A_rho[2] += factors[2];
+            A_rho[3] += OMEGA * factors[3];
+            A_rho[4] += OMEGA * factors[4];
+            A_rho[5] += OMEGA * factors[5];
+            A_rho[6] += (r::one - OMEGA) * factors[3];
+            A_rho[7] += (r::one - OMEGA) * factors[4];
+            A_rho[8] += (r::one - OMEGA) * factors[5];
+
+#if STRONG_CONSERVATION_UX
+            A_ux[0] += factors[0] * cx;
+            A_ux[1] += factors[1] * cx;
+            A_ux[2] += factors[2] * cx;
+            A_ux[3] += OMEGA * factors[3] * cx;
+            A_ux[4] += OMEGA * factors[4] * cx;
+            A_ux[5] += OMEGA * factors[5] * cx;
+            A_ux[6] += (r::one - OMEGA) * factors[3] * cx;
+            A_ux[7] += (r::one - OMEGA) * factors[4] * cx;
+            A_ux[8] += (r::one - OMEGA) * factors[5] * cx;
+#endif
+
+#if STRONG_CONSERVATION_UY
+            A_uy[0] += factors[0] * cy;
+            A_uy[1] += factors[1] * cy;
+            A_uy[2] += factors[2] * cy;
+            A_uy[3] += OMEGA * factors[3] * cy;
+            A_uy[4] += OMEGA * factors[4] * cy;
+            A_uy[5] += OMEGA * factors[5] * cy;
+            A_uy[6] += (r::one - OMEGA) * factors[3] * cy;
+            A_uy[7] += (r::one - OMEGA) * factors[4] * cy;
+            A_uy[8] += (r::one - OMEGA) * factors[5] * cy;
+#endif
         }
     }
 
@@ -158,80 +145,202 @@ __device__ inline void evaluate_fluid_boundary(
     { return A_coeff[r * 8 + c]; };
 
     // uxI equation
-    A(0, 0) = sum_Is_wi_Hx_Hx - sum_Os_wi_Hx * ux_I;                                       // ux
-    A(0, 1) = sum_Is_wi_Hy_Hx - sum_Os_wi_Hy * ux_I;                                       // uy
-    A(0, 2) = -OMEGA * sum_Os_wi_Hxx * ux_I;                                               // ux ux
-    A(0, 3) = -real_t(2) * OMEGA * sum_Os_wi_Hxy * ux_I;                                   // ux uy
-    A(0, 4) = -OMEGA * sum_Os_wi_Hyy * ux_I;                                               // uy uy
-    A(0, 5) = sum_Is_wi_Hxx_Hx - (real_t(1) - OMEGA) * sum_Os_wi_Hxx * ux_I;               // mxx
-    A(0, 6) = real_t(2) * (sum_Is_wi_Hxy_Hx - (real_t(1) - OMEGA) * sum_Os_wi_Hxy * ux_I); // mxy
-    A(0, 7) = sum_Is_wi_Hyy_Hx - (real_t(1) - OMEGA) * sum_Os_wi_Hyy * ux_I;               // myy
+#if EQUATION_ON_MXY
+#if !STRONG_CONSERVATION_UX
+    A(0, 0) = A_ux[1] - A_rho[1] * ux_I; // ux
+    A(0, 1) = A_ux[2] - A_rho[2] * ux_I; // uy
+    A(0, 2) = -A_rho[3] * ux_I;          // ux ux
+    A(0, 3) = -A_rho[4] * ux_I;          // ux uy
+    A(0, 4) = -A_rho[5] * ux_I;          // uy uy
+    A(0, 5) = A_ux[3] - A_rho[6] * ux_I; // mxx
+    A(0, 6) = A_ux[4] - A_rho[7] * ux_I; // mxy
+    A(0, 7) = A_ux[5] - A_rho[8] * ux_I; // myy
 
-    b_coeff[0] = ux_I * sum_Os_wi - sum_Is_wi_Hx;
+    b_coeff[0] = ux_I * A_rho[0] - A_ux[0];
+#else
+    A(0, 0) = A_ux[1] + A_rho[1] * ux_I; // ux
+    A(0, 1) = A_ux[2] + A_rho[2] * ux_I; // uy
+    A(0, 2) = A_ux[3] + A_rho[3] * ux_I; // ux ux
+    A(0, 3) = A_ux[4] + A_rho[4] * ux_I; // ux uy
+    A(0, 4) = A_ux[5] + A_rho[5] * ux_I; // uy uy
+    A(0, 5) = A_ux[6] + A_rho[6] * ux_I; // mxx
+    A(0, 6) = A_ux[7] + A_rho[7] * ux_I; // mxy
+    A(0, 7) = A_ux[8] + A_rho[8] * ux_I; // myy
+
+    b_coeff[0] = -ux_I * A_rho[0] - A_ux[0];
+#endif
+#else
+    const real_t delta = r_cast(0.1);
+
+    if (y < NY / 2)
+    {
+        A(0, 0) = 1;                             // ux
+        A(0, 1) = r::zero;                       // uy
+        A(0, 2) = r::zero;                       // ux ux
+        A(0, 3) = -Stencil::as2 * OMEGA * delta; // ux uy
+        A(0, 4) = r::zero;                       // uy uy
+        A(0, 5) = r::zero;                       // mxx
+        A(0, 6) = Stencil::as2 * OMEGA * delta;  // mxy
+        A(0, 7) = r::zero;                       // myy
+
+        b_coeff[1] = r::zero;
+    }
+    else
+    {
+        A(0, 0) = 1;                             // ux
+        A(0, 1) = r::zero;                       // uy
+        A(0, 2) = r::zero;                       // ux ux
+        A(0, 3) = Stencil::as2 * OMEGA * delta;  // ux uy
+        A(0, 4) = r::zero;                       // uy uy
+        A(0, 5) = r::zero;                       // mxx
+        A(0, 6) = -Stencil::as2 * OMEGA * delta; // mxy
+        A(0, 7) = r::zero;                       // myy
+
+        b_coeff[1] = U_MAX;
+    }
+#endif
 
     // uyI equation
-    // if (r < (R_OUT + R_IN) * r::half)
-    // {
-    //     A(1, 0) = r::zero;                            // ux
-    //     A(1, 1) = 1;                                  // uy
-    //     A(1, 2) = r::zero;                            // ux ux
-    //     A(1, 3) = -Stencil::as2 * OMEGA * (r - R_IN); // ux uy
-    //     A(1, 4) = r::zero;                            // uy uy
-    //     A(1, 5) = r::zero;                            // mxx
-    //     A(1, 6) = Stencil::as2 * OMEGA * (r - R_IN);  // mxy
-    //     A(1, 7) = r::zero;                            // myy
+#if !STRONG_CONSERVATION_UY
+    A(1, 0) = A_uy[1] - A_rho[1] * uy_I; // ux
+    A(1, 1) = A_uy[2] - A_rho[2] * uy_I; // uy
+    A(1, 2) = -A_rho[3] * uy_I;          // ux ux
+    A(1, 3) = -A_rho[4] * uy_I;          // ux uy
+    A(1, 4) = -A_rho[5] * uy_I;          // uy uy
+    A(1, 5) = A_uy[3] - A_rho[6] * uy_I; // mxx
+    A(1, 6) = A_uy[4] - A_rho[7] * uy_I; // mxy
+    A(1, 7) = A_uy[5] - A_rho[8] * uy_I; // myy
 
-    //     b_coeff[1] = U_MAX;
-    // }
-    // else
-    // {
-    //     A(1, 0) = r::zero;                             // ux
-    //     A(1, 1) = 1;                                   // uy
-    //     A(1, 2) = r::zero;                             // ux ux
-    //     A(1, 3) = Stencil::as2 * OMEGA * (R_OUT - r);  // ux uy
-    //     A(1, 4) = r::zero;                             // uy uy
-    //     A(1, 5) = r::zero;                             // mxx
-    //     A(1, 6) = -Stencil::as2 * OMEGA * (R_OUT - r); // mxy
-    //     A(1, 7) = r::zero;                             // myy
+    b_coeff[1] = uy_I * A_rho[0] - A_uy[0];
+#else
+    A(1, 0) = A_uy[1] + A_rho[1] * uy_I; // ux
+    A(1, 1) = A_uy[2] + A_rho[2] * uy_I; // uy
+    A(1, 2) = A_uy[3] + A_rho[3] * uy_I; // ux ux
+    A(1, 3) = A_uy[4] + A_rho[4] * uy_I; // ux uy
+    A(1, 4) = A_uy[5] + A_rho[5] * uy_I; // uy uy
+    A(1, 5) = A_uy[6] + A_rho[6] * uy_I; // mxx
+    A(1, 6) = A_uy[7] + A_rho[7] * uy_I; // mxy
+    A(1, 7) = A_uy[8] + A_rho[8] * uy_I; // myy
 
-    //     b_coeff[1] = r::zero;
-    // }
+    b_coeff[1] = -uy_I * A_rho[0] - A_uy[0];
+#endif
 
-    // mxxI equation
-    A(2, 0) = sum_Is_wi_Hx_Hxx - sum_Os_wi_Hx * mxx_I;                                       // ux
-    A(2, 1) = sum_Is_wi_Hy_Hxx - sum_Os_wi_Hy * mxx_I;                                       // uy
-    A(2, 2) = -OMEGA * sum_Os_wi_Hxx * mxx_I;                                                // ux ux
-    A(2, 3) = -real_t(2) * OMEGA * sum_Os_wi_Hxy * mxx_I;                                    // ux uy
-    A(2, 4) = -OMEGA * sum_Os_wi_Hyy * mxx_I;                                                // uy uy
-    A(2, 5) = sum_Is_wi_Hxx_Hxx - (real_t(1) - OMEGA) * sum_Os_wi_Hxx * mxx_I;               // mxx
-    A(2, 6) = real_t(2) * (sum_Is_wi_Hxy_Hxx - (real_t(1) - OMEGA) * sum_Os_wi_Hxy * mxx_I); // mxy
-    A(2, 7) = sum_Is_wi_Hyy_Hxx - (real_t(1) - OMEGA) * sum_Os_wi_Hyy * mxx_I;               // myy
+// mxxI equation
+#if !MXX_INCOMPRESSIBLE
+    A(2, 0) = A_mxx[1] - A_rho[1] * mxx_I; // ux
+    A(2, 1) = A_mxx[2] - A_rho[2] * mxx_I; // uy
+    A(2, 2) = -A_rho[3] * mxx_I;           // ux ux
+    A(2, 3) = -A_rho[4] * mxx_I;           // ux uy
+    A(2, 4) = -A_rho[5] * mxx_I;           // uy uy
+    A(2, 5) = A_mxx[3] - A_rho[6] * mxx_I; // mxx
+    A(2, 6) = A_mxx[4] - A_rho[7] * mxx_I; // mxy
+    A(2, 7) = A_mxx[5] - A_rho[8] * mxx_I; // myy
 
-    b_coeff[2] = mxx_I * sum_Os_wi - sum_Is_wi_Hxx;
+    b_coeff[2] = mxx_I * A_rho[0] - A_mxx[0];
+#else
+#if MXX_MINUS_MYY_INCOMPRESSIBLE
+    A(2, 0) = A_mxx[1] - A_rho[1] * mxx_I - (A_myy[1] - A_rho[1] * myy_I); // ux
+    A(2, 1) = A_mxx[2] - A_rho[2] * mxx_I - (A_myy[2] - A_rho[2] * myy_I); // uy
+    A(2, 2) = A_rho[3] * myy_I - A_rho[3] * mxx_I;                         // ux ux
+    A(2, 3) = A_rho[4] * myy_I - A_rho[4] * mxx_I;                         // ux uy
+    A(2, 4) = A_rho[5] * myy_I - A_rho[5] * mxx_I;                         // uy uy
+    A(2, 5) = A_mxx[3] - A_rho[6] * mxx_I - (A_myy[3] - A_rho[6] * myy_I); // mxx
+    A(2, 6) = A_mxx[4] - A_rho[7] * mxx_I - (A_myy[4] - A_rho[7] * myy_I); // mxy
+    A(2, 7) = A_mxx[5] - A_rho[8] * mxx_I - (A_myy[5] - A_rho[8] * myy_I); // myy
+
+    b_coeff[2] = mxx_I * A_rho[0] - A_mxx[0] - (myy_I * A_rho[0] - A_myy[0]);
+#else
+    A(2, 0) = r::zero; // ux
+    A(2, 1) = r::zero; // uy
+    A(2, 2) = -1;      // ux ux
+    A(2, 3) = r::zero; // ux uy
+    A(2, 4) = r::zero; // uy uy
+    A(2, 5) = 1;       // mxx
+    A(2, 6) = r::zero; // mxy
+    A(2, 7) = r::zero; // myy
+
+    b_coeff[2] = r::zero;
+#endif
+#endif
 
     // mxyI equation
-    A(3, 0) = sum_Is_wi_Hx_Hxy - sum_Os_wi_Hx * mxy_I;                                       // ux
-    A(3, 1) = sum_Is_wi_Hy_Hxy - sum_Os_wi_Hy * mxy_I;                                       // uy
-    A(3, 2) = -OMEGA * sum_Os_wi_Hxx * mxy_I;                                                // ux ux
-    A(3, 3) = -real_t(2) * OMEGA * sum_Os_wi_Hxy * mxy_I;                                    // ux uy
-    A(3, 4) = -OMEGA * sum_Os_wi_Hyy * mxy_I;                                                // uy uy
-    A(3, 5) = sum_Is_wi_Hxx_Hxy - (real_t(1) - OMEGA) * sum_Os_wi_Hxx * mxy_I;               // mxx
-    A(3, 6) = real_t(2) * (sum_Is_wi_Hxy_Hxy - (real_t(1) - OMEGA) * sum_Os_wi_Hxy * mxy_I); // mxy
-    A(3, 7) = sum_Is_wi_Hyy_Hxy - (real_t(1) - OMEGA) * sum_Os_wi_Hyy * mxy_I;               // myy
+#if EQUATION_ON_MXY
+    if (r < (R_IN + R_OUT) * r::half)
+    {
+        A(3, 0) = r::zero;                            // ux
+        A(3, 1) = 1;                                  // uy
+        A(3, 2) = r::zero;                            // ux ux
+        A(3, 3) = -Stencil::as2 * OMEGA * (r - R_IN); // ux uy
+        A(3, 4) = r::zero;                            // uy uy
+        A(3, 5) = r::zero;                            // mxx
+        A(3, 6) = Stencil::as2 * OMEGA * (r - R_IN);  // mxy
+        A(3, 7) = r::zero;                            // myy
 
-    b_coeff[3] = mxy_I * sum_Os_wi - sum_Is_wi_Hxy;
+        b_coeff[3] = U_MAX;
+    }
+    else
+    {
+        A(3, 0) = r::zero;                             // ux
+        A(3, 1) = 1;                                   // uy
+        A(3, 2) = r::zero;                             // ux ux
+        A(3, 3) = Stencil::as2 * OMEGA * (R_OUT - r);  // ux uy
+        A(3, 4) = r::zero;                             // uy uy
+        A(3, 5) = r::zero;                             // mxx
+        A(3, 6) = -Stencil::as2 * OMEGA * (R_OUT - r); // mxy
+        A(3, 7) = r::zero;                             // myy
 
-    // myyI equation
-    A(4, 0) = sum_Is_wi_Hx_Hyy - sum_Os_wi_Hx * myy_I;                                       // ux
-    A(4, 1) = sum_Is_wi_Hy_Hyy - sum_Os_wi_Hy * myy_I;                                       // uy
-    A(4, 2) = -OMEGA * sum_Os_wi_Hxx * myy_I;                                                // ux ux
-    A(4, 3) = -real_t(2) * OMEGA * sum_Os_wi_Hxy * myy_I;                                    // ux uy
-    A(4, 4) = -OMEGA * sum_Os_wi_Hyy * myy_I;                                                // uy uy
-    A(4, 5) = sum_Is_wi_Hxx_Hyy - (real_t(1) - OMEGA) * sum_Os_wi_Hxx * myy_I;               // mxx
-    A(4, 6) = real_t(2) * (sum_Is_wi_Hxy_Hyy - (real_t(1) - OMEGA) * sum_Os_wi_Hxy * myy_I); // mxy
-    A(4, 7) = sum_Is_wi_Hyy_Hyy - (real_t(1) - OMEGA) * sum_Os_wi_Hyy * myy_I;               // myy
+        b_coeff[3] = r::zero;
+    }
+#else
+    A(3, 0) = A_mxy[1] - A_rho[1] * mxy_I; // ux
+    A(3, 1) = A_mxy[2] - A_rho[2] * mxy_I; // uy
+    A(3, 2) = -A_rho[3] * mxy_I;           // ux ux
+    A(3, 3) = -A_rho[4] * mxy_I;           // ux uy
+    A(3, 4) = -A_rho[5] * mxy_I;           // uy uy
+    A(3, 5) = A_mxy[3] - A_rho[6] * mxy_I; // mxx
+    A(3, 6) = A_mxy[4] - A_rho[7] * mxy_I; // mxy
+    A(3, 7) = A_mxy[5] - A_rho[8] * mxy_I; // myy
 
-    b_coeff[4] = myy_I * sum_Os_wi - sum_Is_wi_Hyy;
+    b_coeff[3] = mxy_I * A_rho[0] - A_mxy[0];
+#endif
+
+// myyI equation
+#if !MYY_INCOMPRESSIBLE
+    A(4, 0) = A_myy[1] - A_rho[1] * myy_I; // ux
+    A(4, 1) = A_myy[2] - A_rho[2] * myy_I; // uy
+    A(4, 2) = -A_rho[3] * myy_I;           // ux ux
+    A(4, 3) = -A_rho[4] * myy_I;           // ux uy
+    A(4, 4) = -A_rho[5] * myy_I;           // uy uy
+    A(4, 5) = A_myy[3] - A_rho[6] * myy_I; // mxx
+    A(4, 6) = A_myy[4] - A_rho[7] * myy_I; // mxy
+    A(4, 7) = A_myy[5] - A_rho[8] * myy_I; // myy
+
+    b_coeff[4] = myy_I * A_rho[0] - A_myy[0];
+#else
+#if MXX_MINUS_MYY_INCOMPRESSIBLE
+    A(4, 0) = r::zero; // ux
+    A(4, 1) = r::zero; // uy
+    A(4, 2) = -1;      // ux ux
+    A(4, 3) = r::zero; // ux uy
+    A(4, 4) = -1;      // uy uy
+    A(4, 5) = 1;       // mxx
+    A(4, 6) = r::zero; // mxy
+    A(4, 7) = 1;       // myy
+
+    b_coeff[4] = r::zero;
+#else
+    A(4, 0) = r::zero; // ux
+    A(4, 1) = r::zero; // uy
+    A(4, 2) = r::zero; // ux ux
+    A(4, 3) = r::zero; // ux uy
+    A(4, 4) = -1;      // uy uy
+    A(4, 5) = r::zero; // mxx
+    A(4, 6) = r::zero; // mxy
+    A(4, 7) = 1;       // myy
+
+    b_coeff[4] = r::zero;
+#endif
+#endif
 
     real_t A_gauss[5 * 5]{};
     real_t b_gauss[5]{};
@@ -244,7 +353,7 @@ __device__ inline void evaluate_fluid_boundary(
     int it = 0;
     const int it_max = 50;
 
-    while (error > real_t(1e-6) && it++ < it_max)
+    while (error > real_t(1e-8) && it++ < it_max)
     {
         const real_t ux_old = ux;
         const real_t uy_old = uy;
@@ -279,12 +388,15 @@ __device__ inline void evaluate_fluid_boundary(
         error = fmax(error, rel_step(myy, myy_old));
     }
 
-    real_t rho_denom = (sum_Os_wi +
-                        sum_Os_wi_Hx * ux +
-                        sum_Os_wi_Hy * uy +
-                        sum_Os_wi_Hxx * ((1 - OMEGA) * mxx + OMEGA * ux * ux) +
-                        real_t(2) * sum_Os_wi_Hxy * ((1 - OMEGA) * mxy + OMEGA * ux * uy) +
-                        sum_Os_wi_Hyy * ((1 - OMEGA) * myy + OMEGA * uy * uy));
+    real_t rho_denom = A_rho[0] +
+                       A_rho[1] * ux +
+                       A_rho[2] * uy +
+                       A_rho[3] * ux * ux +
+                       A_rho[4] * ux * uy +
+                       A_rho[5] * uy * uy +
+                       A_rho[6] * mxx +
+                       A_rho[7] * mxy +
+                       A_rho[8] * myy;
 
     real_t inv_rho_denom = real_t(1) / rho_denom;
 

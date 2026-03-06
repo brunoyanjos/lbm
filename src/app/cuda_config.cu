@@ -13,14 +13,14 @@ CudaConfig make_config(
     CudaConfig cfg;
 
 #if defined(LBM_STENCIL_D2Q9)
-    cfg.block = dim3(32, 32);
+    cfg.block = dim3(16, 16);
 #elif defined(LBM_STENCIL_D2V17)
     size_t bytes_per_lattice = (Stencil::Q - 1) * sizeof(real_t);
     size_t max_lattices = shared_memory / bytes_per_lattice;
 
     cfg.block = find_optimal_block(max_lattices);
 #else
-    cfg.block = dim3(32, 32);
+    cfg.block = dim3(16, 16);
 #endif
 
     cfg.grid = dim3(

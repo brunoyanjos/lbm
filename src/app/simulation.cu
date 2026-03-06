@@ -8,6 +8,7 @@
 #include "../io/output_tags_vtk.cuh"
 #include "../io/output_tke_bin.cuh"
 #include "../io/geometry_outputs.cuh"
+#include "../io/debug_domain.cuh"
 
 #include "../lbm/state/lbm_state.cuh"
 #include "../lbm/lbm_init_state.cuh"
@@ -39,6 +40,7 @@ namespace app
         {
             if (ctx.show_progress)
                 progress::ProgressUI::suspend_for_log();
+            io::debug_domain(tags, true, true, 2048);
             io::write_tags_vtk(tags, ctx.out_dir);
         }
 

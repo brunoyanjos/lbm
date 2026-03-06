@@ -81,7 +81,7 @@ namespace ANNUL
         m |= (1u << 0);
 
 #pragma unroll
-        for (int i = 1; i < 9; ++i)
+        for (int i = 1; i < Stencil::Q; ++i)
         {
             const int cx = Stencil::cx(i);
             const int cy = Stencil::cy(i);
@@ -92,11 +92,14 @@ namespace ANNUL
             if (get_node_safe(nodes, xn, yn) == SOLID)
                 continue;
 
-            if ((cx != 0) && (cy != 0))
+            if (cx + cy == 4)
             {
-                if (get_node_safe(nodes, x + cx, y) == SOLID)
+                if (get_node_safe(nodes, x + cx / 2, y + cy / 2) == SOLID)
                     continue;
-                if (get_node_safe(nodes, x, y + cy) == SOLID)
+            }
+            else if (cx + cy == 3)
+            {
+                if (get_node_safe(nodes, x + cx / 3, y + cy / 3) == SOLID || get_node_safe(nodes, x + cx * 2 / 3, y + cy * 2 / 3) == SOLID)
                     continue;
             }
 
@@ -115,8 +118,8 @@ namespace ANNUL
         annul_tags_kernel<<<grid, block>>>(T.d_node);
         CUDA_CHECK(cudaGetLastError());
 
-        annul_tags_boundary_kernel<<<grid, block>>>(T.d_node);
-        CUDA_CHECK(cudaGetLastError());
+        // annul_tags_boundary_kernel<<<grid, block>>>(T.d_node);
+        // CUDA_CHECK(cudaGetLastError());
 
         init_valid_dirs<<<grid, block>>>(T.d_node, T.d_valid);
         CUDA_CHECK(cudaGetLastError());

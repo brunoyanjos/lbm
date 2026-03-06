@@ -137,6 +137,16 @@ namespace D2V17
         Hyy = cy * cy - D2V17::cs2;
     }
 
+    __host__ __device__ __forceinline__ void basis2polar(int i, real_t c, real_t s,
+                                                         real_t &cx, real_t &cy, real_t &Hxx, real_t &Hxy, real_t &Hyy)
+    {
+        cx = r_cast(D2V17::cx(i)) * c + r_cast(D2V17::cy(i)) * s;
+        cy = r_cast(D2V17::cy(i)) * c - r_cast(D2V17::cx(i)) * s;
+        Hxx = cx * cx - D2V17::cs2;
+        Hxy = cx * cy;
+        Hyy = cy * cy - D2V17::cs2;
+    }
+
     __host__ __device__ __forceinline__ int opp(int i)
     {
         switch (i)

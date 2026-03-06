@@ -30,10 +30,8 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # You can adjust freely.
 # =====================================================
 cases=(
-  "square_cavity 3200"
   "annul         25"
   "channel       200"
-  "couette       200"
   "jet           100"
 )
 

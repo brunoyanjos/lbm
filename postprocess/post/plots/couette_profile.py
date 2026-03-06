@@ -39,17 +39,21 @@ def plot_couette_profile(
 ):
     ux_y = np.asarray(ux_y, dtype=np.float64)
 
-    ny = int(prof_meta.get("ny", ux_y.size))
-    if ny <= 0:
+    ny = int(prof_meta.get("ny", 0))
+    if ny <= 1:
         raise ValueError("invalid ny for couette profile")
-    if ux_y.size != ny:
-        raise ValueError(f"ux_y size mismatch: ux_y.size={ux_y.size}, ny={ny}")
 
-    # coordenada y e y*
-    y = np.arange(ny, dtype=np.float64)
-    H = float(ny - 1)
+    delta = int(prof_meta.get("delta", 0))
+    if delta < 0:
+        raise ValueError("delta must be >= 0")
+
+    # ux_y já vem cortado: primeiro ponto corresponde a y = delta
+    y = np.arange(delta, delta + ny, dtype=np.float64)
+
+    H = float(ny + 2 * delta - 1)
     if H <= 0.0:
         raise ValueError("invalid couette height (ny-1 must be > 0)")
+
     y_star = y / H
 
     # velocidade de referência (parede)
@@ -70,16 +74,14 @@ def plot_couette_profile(
         xlabel = r"$u_x$"
         ylabel = "y (lattice units)"
 
-    # ordem (por segurança)
+    # ordem por segurança
     order = np.argsort(y_star)
     y_star = y_star[order]
     ux_plot = ux_plot[order]
 
     fig, ax = plt.subplots(figsize=(7.0, 4.6))
 
-    # -------------------------
-    # Solver: somente pontos disponíveis
-    # -------------------------
+    # Solver
     ax.plot(
         ux_plot,
         y_star,
@@ -92,9 +94,7 @@ def plot_couette_profile(
         zorder=2,
     )
 
-    # -------------------------
-    # Analítico: domínio completo
-    # -------------------------
+    # Analítico no domínio completo
     if show_analytic:
         y_full = np.linspace(0.0, H, 400, dtype=np.float64)
         y_full_star = y_full / H
@@ -112,6 +112,16 @@ def plot_couette_profile(
             zorder=3,
         )
 
+    # regiões excluídas perto das paredes: pintar no eixo Y
+    y_gap_bottom = float(np.clip(y_star.min(), 0.0, 1.0))
+    y_gap_top = float(np.clip(y_star.max(), 0.0, 1.0))
+
+    if y_gap_bottom > 0.0:
+        ax.axhspan(0.0, y_gap_bottom, alpha=0.10, color="gray", zorder=0)
+
+    if y_gap_top < 1.0:
+        ax.axhspan(y_gap_top, 1.0, alpha=0.10, color="gray", zorder=0)
+
     ax.set_xlabel(xlabel, fontsize=13)
     ax.set_ylabel(ylabel, fontsize=13)
     ax.tick_params(axis="both", which="major", labelsize=11)
@@ -120,11 +130,7 @@ def plot_couette_profile(
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    # Couette: y* em [0,1]
     ax.set_ylim(0.0, 1.0)
-
-    # (opcional) “parede inferior embaixo”
-    ax.invert_yaxis()
 
     if title is None:
         stencil = sim_meta.get("Stencil", "UNKNOWN")

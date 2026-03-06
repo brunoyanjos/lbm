@@ -40,9 +40,9 @@ __host__ __device__ __forceinline__ T dabs(T x)
 __host__ __device__ __forceinline__ real_t r_sqrt(real_t x) { return dsqrt<real_t>(x); }
 __host__ __device__ __forceinline__ real_t r_abs(real_t x) { return dabs<real_t>(x); }
 
-__device__ __forceinline__ void polar_unit_vectors(int x, int y,
-                                                   real_t &c, real_t &s,
-                                                   real_t &r)
+__host__ __device__ __forceinline__ void polar_unit_vectors(int x, int y,
+                                                            real_t &c, real_t &s,
+                                                            real_t &r)
 {
     const real_t xc = r_cast(NX - 1) * r::half;
     const real_t yc = r_cast(NY - 1) * r::half;
