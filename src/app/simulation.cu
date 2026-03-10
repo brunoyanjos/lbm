@@ -81,7 +81,6 @@ namespace app
             lbm_mom_step(state, cfg, tags);
             state.cur ^= 1;
 
-            // IO (pode ter prints internos) -> limpa a barra antes
             if (ctx.enable_io && (t % SAVE_INTERVAL == 0))
             {
                 upload_state_to_host(state);
@@ -92,12 +91,10 @@ namespace app
                 io::write_vtk(state, cfg, t, ctx.out_dir);
             }
 
-            // barra (limite de frequência dentro do ProgressUI)
             if (ctx.show_progress && (ui.should_print() || t == t_end - 1))
             {
                 const auto now = clock::now();
 
-                // mede GPU parcial desde ev_prog0
                 CUDA_CHECK(cudaEventRecord(ev_prog1));
                 CUDA_CHECK(cudaEventSynchronize(ev_prog1));
 

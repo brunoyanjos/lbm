@@ -10,6 +10,7 @@
 #include "population/pop_reconstruction.cuh"
 
 #include "../geometries/active_geometry.cuh"
+
 #include "../core/indexing.cuh"
 #include "../core/cuda_utils.cuh"
 #include "../core/cuda_utils.cuh"
@@ -41,40 +42,13 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
     {
         Geometry::bc_velocity(x, y, ux, uy);
 
-        if (wall_id == to_u8(NodeId::DIRICHLET))
-        {
-            apply_boundary_dirichlet(pop, valid_ms, rho, ux, uy, mxx, mxy, myy);
-        }
-        else if (wall_id == to_u8(NodeId::INLET))
-        {
-            apply_boundary_inlet(pop, valid_ms, rho, ux, uy, mxx, mxy, myy);
-        }
-        else if (wall_id == to_u8(NodeId::OUTLET))
-        {
-            real_t adj_pop[Stencil::Q];
-
-            reconstruct_streamed_pop(adj_pop, S, c, x - 1, y);
-            evaluate_moments_from_pop(adj_pop, rho, ux, uy, mxx, mxy, myy);
-
-            apply_boundary_outlet(pop, valid_ms, rho, ux, uy, mxx, mxy, myy);
-        }
+        apply_boundary_dirichlet(pop, valid_ms, rho, ux, uy, mxx, mxy, myy);
     }
     else
     {
         if (is_full_mask(valid_ms))
         {
             evaluate_moments_from_pop(pop, rho, ux, uy, mxx, mxy, myy);
-        }
-        else if (count_valid_dirs(valid_ms) < 8)
-        {
-            rho = S.d_rho[c][idx] + Geometry::RHO_0;
-            ux = S.d_ux[c][idx] / Stencil::as2;
-            uy = S.d_uy[c][idx] / Stencil::as2;
-            mxx = S.d_mxx[c][idx] / (Stencil::as4 * r::half);
-            mxy = S.d_mxy[c][idx] / Stencil::as4;
-            myy = S.d_myy[c][idx] / (Stencil::as4 * r::half);
-
-            evaluate_fluid_boundary(pop, valid_ms, rho, ux, uy, mxx, mxy, myy, x, y);
         }
         else
         {

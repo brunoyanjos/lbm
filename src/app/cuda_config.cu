@@ -4,24 +4,11 @@
 #include "../lbm/stencil_active.cuh"
 #include <iostream>
 
-CudaConfig make_config(
-#if defined(LBM_STENCIL_D2V17)
-    int shared_memory
-#endif
-)
+CudaConfig make_config()
 {
     CudaConfig cfg;
 
-#if defined(LBM_STENCIL_D2Q9)
-    cfg.block = dim3(16, 16);
-#elif defined(LBM_STENCIL_D2V17)
-    size_t bytes_per_lattice = (Stencil::Q - 1) * sizeof(real_t);
-    size_t max_lattices = shared_memory / bytes_per_lattice;
-
-    cfg.block = find_optimal_block(max_lattices);
-#else
-    cfg.block = dim3(16, 16);
-#endif
+    cfg.block = dim3(32, 16);
 
     cfg.grid = dim3(
         (Geometry::NX + cfg.block.x - 1) / cfg.block.x,
