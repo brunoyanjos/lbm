@@ -7,17 +7,16 @@
 #include "../io/output_vtk.cuh"
 #include "../io/output_tags_vtk.cuh"
 #include "../io/output_tke_bin.cuh"
-#include "../io/geometry_outputs.cuh"
 #include "../io/debug_domain.cuh"
 
 #include "../lbm/state/lbm_state.cuh"
 #include "../lbm/lbm_init_state.cuh"
 #include "../lbm/lbm_mom_step.cuh"
-#include "../lbm/domain/active_geometry.cuh"
+
+#include "../geometries/active_geometry.cuh"
 
 #include "../core/cuda_utils.cuh"
 #include "../core/simulation_config.h"
-#include "../core/active_geometry.cuh"
 
 #include <chrono>
 #include <iostream>
@@ -109,7 +108,7 @@ namespace app
                 const double wall_elapsed_s = std::chrono::duration<double>(now - wall0).count();
 
                 const int done_steps = (t - t_begin + 1);
-                const double updates = double(NX) * double(NY) * double(done_steps);
+                const double updates = double(Geometry::NX) * double(Geometry::NY) * double(done_steps);
                 const double mlups_partial = (gpu_elapsed_s > 0.0) ? (updates / gpu_elapsed_s / 1e6) : 0.0;
 
                 ui.print(t, wall_elapsed_s, gpu_elapsed_s, mlups_partial);
@@ -119,7 +118,7 @@ namespace app
         if (ctx.enable_io)
         {
             upload_state_to_host(state);
-            io::geometry_final_outputs(state, cfg, t_end, ctx.out_dir, tags);
+            Geometry::outputs(state, t_end, ctx.out_dir, tags);
         }
 
         const double gpu_s = gt.stop_seconds();
@@ -132,7 +131,7 @@ namespace app
         r.wall_seconds = wall_s;
         r.measured_steps = (N_STEPS - ctx.warmup_steps);
 
-        const double updates = double(NX) * double(NY) * double(r.measured_steps);
+        const double updates = double(Geometry::NX) * double(Geometry::NY) * double(r.measured_steps);
         r.mlups_gpu = updates / r.gpu_seconds / 1e6;
         r.mlups_wall = updates / r.wall_seconds / 1e6;
 

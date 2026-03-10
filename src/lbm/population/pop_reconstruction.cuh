@@ -17,7 +17,7 @@ __device__ __forceinline__ void reconstruct_streamed_pop(real_t *__restrict__ po
 
         const size_t n_idx = idxGlobalPeriodic(x - icx, y - icy);
 
-        const real_t rho = S.d_rho[c][n_idx] + RHO_0;
+        const real_t rho = S.d_rho[c][n_idx] + Geometry::RHO_0;
         const real_t ux = S.d_ux[c][n_idx];
         const real_t uy = S.d_uy[c][n_idx];
         const real_t mxx = S.d_mxx[c][n_idx];

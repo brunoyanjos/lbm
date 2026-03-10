@@ -2,7 +2,7 @@
 #include <cuda_runtime.h>
 #include <iostream>
 
-#include "../core/active_geometry.cuh"
+#include "../geometries/active_geometry.cuh"
 #include "../app/cuda_config.cuh"
 #include "../lbm/stencil_active.cuh"
 
@@ -33,18 +33,18 @@ inline void print_simulation_summary(const CudaConfig &cfg,
 
     // Domain
     std::cout << "Domain size       : "
-              << NX << " x " << NY << "\n";
+              << Geometry::NX << " x " << Geometry::NY << "\n";
     std::cout << "Total nodes       : "
-              << NX * NY << "\n\n";
+              << Geometry::NX * Geometry::NY << "\n\n";
 
     // Physics / nondimensional
-    std::cout << "Re                : " << RE << "\n";
-    std::cout << "U_lid             : " << U_MAX << "\n";
-    std::cout << "L_char            : " << L_CHAR << "\n";
-    std::cout << "nu (visc)         : " << VISC << "\n";
-    std::cout << "tau               : " << TAU << "\n";
-    std::cout << "omega             : " << OMEGA << "\n";
-    std::cout << "rho_0             : " << RHO_0 << "\n\n";
+    std::cout << "Re                : " << Geometry::RE << "\n";
+    std::cout << "U_lid             : " << Geometry::U_MAX << "\n";
+    std::cout << "L_char            : " << Geometry::L_CHAR << "\n";
+    std::cout << "nu (visc)         : " << Geometry::VISC << "\n";
+    std::cout << "tau               : " << Geometry::TAU << "\n";
+    std::cout << "omega             : " << Geometry::OMEGA << "\n";
+    std::cout << "rho_0             : " << Geometry::RHO_0 << "\n\n";
 
     // Kernel config
     const size_t threads_per_block = cfg.block.x * cfg.block.y;

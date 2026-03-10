@@ -2,7 +2,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
-#include "../core/active_geometry.cuh"
+#include "../geometries/active_geometry.cuh"
 
 namespace io
 {
@@ -15,8 +15,8 @@ namespace io
 
         std::ofstream f(fs::path(out_dir) / "meta" / "performance.txt");
         f << std::fixed << std::setprecision(6);
-        f << "NX " << NX << "\n";
-        f << "NY " << NY << "\n";
+        f << "NX " << Geometry::NX << "\n";
+        f << "NY " << Geometry::NY << "\n";
         f << "measured_steps " << r.measured_steps << "\n";
         f << "gpu_seconds " << r.gpu_seconds << "\n";
         f << "wall_seconds " << r.wall_seconds << "\n";

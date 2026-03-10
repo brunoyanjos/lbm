@@ -19,9 +19,6 @@ namespace progress
         std::chrono::steady_clock::time_point wall0{};
         std::chrono::steady_clock::time_point last_print{};
 
-        // eventos CUDA opcionais (você já mede GPU parcial no simulation)
-        // aqui a UI só imprime
-
         void start(int t0_, int t_end_, bool enabled_, double hz_)
         {
             t0 = t0_;
@@ -50,16 +47,11 @@ namespace progress
 
         static inline void clear_line()
         {
-            // limpa a linha atual no terminal (ANSI)
-            // \r -> início da linha
-            // \033[2K -> clear entire line
             std::cerr << "\r\033[2K" << std::flush;
         }
 
-        // chame antes de imprimir qualquer log em stdout (ou stderr)
         static inline void suspend_for_log()
         {
-            // encerra a linha do progresso pra não misturar
             std::cerr << "\r\033[2K" << std::flush;
         }
 
@@ -108,7 +100,6 @@ namespace progress
             last_print = std::chrono::steady_clock::now();
         }
 
-        // limpa e não deixa “resto” da barra na tela
         void finish(bool keep_final_line = false,
                     const char *final_msg = nullptr)
         {
@@ -117,7 +108,6 @@ namespace progress
 
             if (keep_final_line)
             {
-                // imprime uma linha final (sem \r) e pula linha
                 clear_line();
                 if (final_msg)
                     std::cerr << final_msg;
@@ -125,7 +115,6 @@ namespace progress
             }
             else
             {
-                // “some” com o progresso
                 clear_line();
             }
         }

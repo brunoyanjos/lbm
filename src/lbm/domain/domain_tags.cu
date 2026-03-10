@@ -1,11 +1,11 @@
 #include "domain_tags.cuh"
-#include "../../core/active_geometry.cuh"
+#include "../../geometries/active_geometry.cuh"
 #include "../../core/cuda_utils.cuh"
 
 DomainTags domain_tags_allocate()
 {
     DomainTags T{};
-    T.N = static_cast<size_t>(NX) * static_cast<size_t>(NY);
+    T.N = static_cast<size_t>(Geometry::NX) * static_cast<size_t>(Geometry::NY);
     T.bytes_valid = T.N * sizeof(uint32_t);
     T.bytes_node = T.N * sizeof(uint8_t);
 

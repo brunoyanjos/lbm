@@ -1,6 +1,6 @@
 #pragma once
 #include "../../core/types.cuh"
-#include "../../core/active_geometry.cuh"
+#include "../../geometries/active_geometry.cuh"
 #include "../../core/math_utils.cuh"
 #include "../../core/linear_solver.cuh"
 #include "../stencil_active.cuh"
@@ -137,34 +137,34 @@ __device__ __forceinline__ void apply_boundary_dirichlet(
     { return Aflat[r * Nsys + c]; };
 
     // mxx
-    A(0, 0) = sum_Is_wi_Hxx_Hxx - (r::one - OMEGA) * sum_Os_wi_Hxx * mxx_I;
-    A(0, 1) = r::two * (sum_Is_wi_Hxy_Hxx - (r::one - OMEGA) * sum_Os_wi_Hxy * mxx_I);
-    A(0, 2) = sum_Is_wi_Hyy_Hxx - (r::one - OMEGA) * sum_Os_wi_Hyy * mxx_I;
+    A(0, 0) = sum_Is_wi_Hxx_Hxx - (r::one - Geometry::OMEGA) * sum_Os_wi_Hxx * mxx_I;
+    A(0, 1) = r::two * (sum_Is_wi_Hxy_Hxx - (r::one - Geometry::OMEGA) * sum_Os_wi_Hxy * mxx_I);
+    A(0, 2) = sum_Is_wi_Hyy_Hxx - (r::one - Geometry::OMEGA) * sum_Os_wi_Hyy * mxx_I;
     b[0] = sum_Os_wi * mxx_I - sum_Is_wi_Hxx +
            ux * (sum_Os_wi_Hx * mxx_I - sum_Is_wi_Hx_Hxx) + uy * (sum_Os_wi_Hy * mxx_I - sum_Is_wi_Hy_Hxx) +
-           OMEGA * ux * ux * sum_Os_wi_Hxx * mxx_I +
-           r::two * OMEGA * ux * uy * sum_Os_wi_Hxy * mxx_I +
-           OMEGA * uy * uy * sum_Os_wi_Hyy * mxx_I;
+           Geometry::OMEGA * ux * ux * sum_Os_wi_Hxx * mxx_I +
+           r::two * Geometry::OMEGA * ux * uy * sum_Os_wi_Hxy * mxx_I +
+           Geometry::OMEGA * uy * uy * sum_Os_wi_Hyy * mxx_I;
 
     // mxy
-    A(1, 0) = sum_Is_wi_Hxx_Hxy - (r::one - OMEGA) * sum_Os_wi_Hxx * mxy_I;
-    A(1, 1) = r::two * (sum_Is_wi_Hxy_Hxy - (r::one - OMEGA) * sum_Os_wi_Hxy * mxy_I);
-    A(1, 2) = sum_Is_wi_Hyy_Hxy - (r::one - OMEGA) * sum_Os_wi_Hyy * mxy_I;
+    A(1, 0) = sum_Is_wi_Hxx_Hxy - (r::one - Geometry::OMEGA) * sum_Os_wi_Hxx * mxy_I;
+    A(1, 1) = r::two * (sum_Is_wi_Hxy_Hxy - (r::one - Geometry::OMEGA) * sum_Os_wi_Hxy * mxy_I);
+    A(1, 2) = sum_Is_wi_Hyy_Hxy - (r::one - Geometry::OMEGA) * sum_Os_wi_Hyy * mxy_I;
     b[1] = sum_Os_wi * mxy_I - sum_Is_wi_Hxy +
            ux * (sum_Os_wi_Hx * mxy_I - sum_Is_wi_Hx_Hxy) + uy * (sum_Os_wi_Hy * mxy_I - sum_Is_wi_Hy_Hxy) +
-           OMEGA * ux * ux * sum_Os_wi_Hxx * mxy_I +
-           r::two * OMEGA * ux * uy * sum_Os_wi_Hxy * mxy_I +
-           OMEGA * uy * uy * sum_Os_wi_Hyy * mxy_I;
+           Geometry::OMEGA * ux * ux * sum_Os_wi_Hxx * mxy_I +
+           r::two * Geometry::OMEGA * ux * uy * sum_Os_wi_Hxy * mxy_I +
+           Geometry::OMEGA * uy * uy * sum_Os_wi_Hyy * mxy_I;
 
     // myy
-    A(2, 0) = sum_Is_wi_Hxx_Hyy - (r::one - OMEGA) * sum_Os_wi_Hxx * myy_I;
-    A(2, 1) = r::two * (sum_Is_wi_Hxy_Hyy - (r::one - OMEGA) * sum_Os_wi_Hxy * myy_I);
-    A(2, 2) = sum_Is_wi_Hyy_Hyy - (r::one - OMEGA) * sum_Os_wi_Hyy * myy_I;
+    A(2, 0) = sum_Is_wi_Hxx_Hyy - (r::one - Geometry::OMEGA) * sum_Os_wi_Hxx * myy_I;
+    A(2, 1) = r::two * (sum_Is_wi_Hxy_Hyy - (r::one - Geometry::OMEGA) * sum_Os_wi_Hxy * myy_I);
+    A(2, 2) = sum_Is_wi_Hyy_Hyy - (r::one - Geometry::OMEGA) * sum_Os_wi_Hyy * myy_I;
     b[2] = sum_Os_wi * myy_I - sum_Is_wi_Hyy +
            ux * (sum_Os_wi_Hx * myy_I - sum_Is_wi_Hx_Hyy) + uy * (sum_Os_wi_Hy * myy_I - sum_Is_wi_Hy_Hyy) +
-           OMEGA * ux * ux * sum_Os_wi_Hxx * myy_I +
-           r::two * OMEGA * ux * uy * sum_Os_wi_Hyy * myy_I +
-           OMEGA * uy * uy * sum_Os_wi_Hyy * myy_I;
+           Geometry::OMEGA * ux * ux * sum_Os_wi_Hxx * myy_I +
+           r::two * Geometry::OMEGA * ux * uy * sum_Os_wi_Hyy * myy_I +
+           Geometry::OMEGA * uy * uy * sum_Os_wi_Hyy * myy_I;
 
     gaussianElimination<3>(Aflat, b, m);
 
@@ -174,8 +174,8 @@ __device__ __forceinline__ void apply_boundary_dirichlet(
 
     const real_t rho_denominator = sum_Os_wi +
                                    sum_Os_wi_Hx * ux + sum_Os_wi_Hy * uy +
-                                   (r::one - OMEGA) * sum_Os_wi_Hxx * mxx + r::two * (r::one - OMEGA) * sum_Os_wi_Hxy * mxy + (r::one - OMEGA) * sum_Os_wi_Hyy * myy +
-                                   OMEGA * sum_Os_wi_Hxx * ux * ux + r::two * OMEGA * sum_Os_wi_Hxy * ux * uy + OMEGA * sum_Os_wi_Hyy * uy * uy;
+                                   (r::one - Geometry::OMEGA) * sum_Os_wi_Hxx * mxx + r::two * (r::one - Geometry::OMEGA) * sum_Os_wi_Hxy * mxy + (r::one - Geometry::OMEGA) * sum_Os_wi_Hyy * myy +
+                                   Geometry::OMEGA * sum_Os_wi_Hxx * ux * ux + r::two * Geometry::OMEGA * sum_Os_wi_Hxy * ux * uy + Geometry::OMEGA * sum_Os_wi_Hyy * uy * uy;
     const real_t inv_rho = real_t(1) / rho_denominator;
 
     rho = rho_I * inv_rho;

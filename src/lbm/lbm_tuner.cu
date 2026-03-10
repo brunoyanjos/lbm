@@ -28,10 +28,6 @@ __host__ dim3 find_optimal_block(size_t max_lattices)
 
             const int balance = std::abs(bx - by);
 
-            // Critério:
-            // 1) maior área
-            // 2) mais "quadrado" (menor |bx-by|)
-            // 3) se ainda empatar, prefira maior bx (tende a melhorar coalescing em x, se x for contíguo)
             if (area > best_area ||
                 (area == best_area && balance < best_balance) ||
                 (area == best_area && balance == best_balance && bx > best_x))

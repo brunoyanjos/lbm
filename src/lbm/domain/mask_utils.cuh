@@ -37,7 +37,7 @@ __host__ __device__ __forceinline__
     uint8_t
     get_node_safe(const uint8_t *__restrict__ nodes, int x, int y)
 {
-    if ((unsigned)x >= (unsigned)NX || (unsigned)y >= (unsigned)NY)
+    if ((unsigned)x >= (unsigned)Geometry::NX || (unsigned)y >= (unsigned)Geometry::NY)
         return to_u8(NodeId::SOLID);
 
     return nodes[idxGlobal(x, y)];

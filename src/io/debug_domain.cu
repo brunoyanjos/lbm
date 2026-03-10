@@ -4,11 +4,11 @@
 #include <cstdint>
 #include <algorithm>
 
-#include "../lbm/stencil_active.cuh"   // Stencil::Q, cx, cy
-#include "../core/active_geometry.cuh" // NX, NY (ou onde estiver)
-#include "../core/types.cuh"           // real_t, etc (se precisar)
-#include "../core/cuda_utils.cuh"      // CUDA_CHECK (se quiser)
-#include "../core/math_utils.cuh"      // CUDA_CHECK (se quiser)
+#include "../lbm/stencil_active.cuh"         // Stencil::Q, cx, cy
+#include "../geometries/active_geometry.cuh" // NX, NY (ou onde estiver)
+#include "../core/types.cuh"                 // real_t, etc (se precisar)
+#include "../core/cuda_utils.cuh"            // CUDA_CHECK (se quiser)
+#include "../core/math_utils.cuh"            // CUDA_CHECK (se quiser)
 
 namespace
 {
@@ -23,7 +23,7 @@ namespace
 
     static inline bool in_bounds(int x, int y)
     {
-        return (0 <= x && x < int(NX) && 0 <= y && y < int(NY));
+        return (0 <= x && x < int(Geometry::NX) && 0 <= y && y < int(Geometry::NY));
     }
 
     // acesso host para o node buffer (uint8), fora -> SOLID (conservador)
@@ -31,7 +31,7 @@ namespace
     {
         if (!in_bounds(x, y))
             return SOLID;
-        return nodes[size_t(x) + size_t(NX) * size_t(y)];
+        return nodes[size_t(x) + size_t(Geometry::NX) * size_t(y)];
     }
 
     // detecta se é FLUID perto de SOLID (qualquer vizinho sólido em 1..Q-1)
@@ -97,16 +97,16 @@ namespace io
 
         if (print_domain)
         {
-            std::printf("\n=== DOMAIN (NY=%d, NX=%d) ===\n", int(NY), int(NX));
+            std::printf("\n=== DOMAIN (NY=%d, NX=%d) ===\n", int(Geometry::NY), int(Geometry::NX));
             std::printf("Legend: F=FLUID, S=SOLID, D=DIRICHLET\n\n");
 
             // imprime com y decrescente para o "topo" aparecer em cima
-            for (int y = int(NY) - 1; y >= 0; --y)
+            for (int y = int(Geometry::NY) - 1; y >= 0; --y)
             {
                 std::printf("%4d | ", y);
-                for (int x = 0; x < int(NX); ++x)
+                for (int x = 0; x < int(Geometry::NX); ++x)
                 {
-                    const size_t idx = size_t(x) + size_t(NX) * size_t(y);
+                    const size_t idx = size_t(x) + size_t(Geometry::NX) * size_t(y);
                     const char c = node_char(nodes[idx], FLUID, SOLID, DIRICHLET, INLET, OUTLET);
                     std::printf("%c", c);
                 }
@@ -114,10 +114,10 @@ namespace io
             }
 
             std::printf("      +");
-            for (int x = 0; x < int(NX) + 1; ++x)
+            for (int x = 0; x < int(Geometry::NX) + 1; ++x)
                 std::printf("-");
             std::printf("\n       ");
-            for (int x = 0; x < int(NX); ++x)
+            for (int x = 0; x < int(Geometry::NX); ++x)
                 std::printf("%d", (x % 10));
             std::printf("\n\n");
         }
@@ -130,11 +130,11 @@ namespace io
             int printed = 0;
 
             // varre tudo, mas imprime só casos relevantes
-            for (int y = 0; y < int(NY); ++y)
+            for (int y = 0; y < int(Geometry::NY); ++y)
             {
-                for (int x = 0; x < int(NX); ++x)
+                for (int x = 0; x < int(Geometry::NX); ++x)
                 {
-                    const size_t idx = size_t(x) + size_t(NX) * size_t(y);
+                    const size_t idx = size_t(x) + size_t(Geometry::NX) * size_t(y);
                     const uint8_t nid = nodes[idx];
 
                     if (nid == DIRICHLET)
@@ -150,7 +150,7 @@ namespace io
                         continue; // só fluidos perto do sólido
 
                     real_t c, s, r;
-                    polar_unit_vectors(x, y, c, s, r);
+                    polar_unit_vectors(x, y, x, y, c, s, r);
 
                     std::printf("(x=%d, y=%d) idx=%zu  mask=0x%08X  bits: ", x, y, idx, m);
 
@@ -166,7 +166,7 @@ namespace io
                     if (++printed >= std::max(0, max_mask_points))
                     {
                         std::printf("... truncated (max_mask_points=%d)\n", max_mask_points);
-                        y = int(NY); // break duplo
+                        y = int(Geometry::NY); // break duplo
                         break;
                     }
                 }

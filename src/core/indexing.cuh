@@ -1,6 +1,6 @@
 #pragma once
 
-#include "active_geometry.cuh"
+#include "../geometries/active_geometry.cuh"
 #include <cstddef>
 #include <limits>
 
@@ -9,18 +9,18 @@ constexpr size_t INVALID_INDEX = std::numeric_limits<size_t>::max();
 __host__ __device__ __forceinline__ int wrap_x(int x)
 {
     if (x < 0)
-        return x + NX;
-    if (x >= NX)
-        return x - NX;
+        return x + Geometry::NX;
+    if (x >= Geometry::NX)
+        return x - Geometry::NX;
     return x;
 }
 
 __host__ __device__ __forceinline__ int wrap_y(int y)
 {
     if (y < 0)
-        return y + NY;
-    if (y >= NY)
-        return y - NY;
+        return y + Geometry::NY;
+    if (y >= Geometry::NY)
+        return y - Geometry::NY;
     return y;
 }
 
@@ -29,7 +29,7 @@ __host__ __device__ __forceinline__
     idxGlobal(int x, int y)
 {
     return static_cast<size_t>(x) +
-           static_cast<size_t>(y) * static_cast<size_t>(NX);
+           static_cast<size_t>(y) * static_cast<size_t>(Geometry::NX);
 }
 
 __host__ __device__ __forceinline__
@@ -54,7 +54,9 @@ __device__ __forceinline__
     idxThreadGlobal2D(int &x, int &y)
 {
     threadXY(x, y);
-    if (x < 0 || y < 0 || x >= NX || y >= NY)
+
+    if ((unsigned)x >= (unsigned)Geometry::NX || (unsigned)y >= (unsigned)Geometry::NY)
         return INVALID_INDEX;
+
     return idxGlobal(x, y);
 }

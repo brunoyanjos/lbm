@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include "../lbm/domain/active_geometry.cuh"
+#include "../geometries/active_geometry.cuh"
 
 namespace io
 {

@@ -3,7 +3,7 @@
 #include "../../core/types.cuh"
 #include "../../core/linear_solver.cuh"
 #include "../domain/mask_utils.cuh"
-#include "../../core/active_geometry.cuh"
+#include "../../geometries/active_geometry.cuh"
 #include <cstdint>
 
 __device__ inline void evaluate_fluid_node(
@@ -170,62 +170,62 @@ __device__ inline void evaluate_fluid_node(
     { return A_coeff[r * 8 + c]; };
 
     // uxI equation
-    A(0, 0) = sum_Is_wi_Hx_Hx - sum_Os_wi_Hx * ux_I;                                       // ux
-    A(0, 1) = sum_Is_wi_Hy_Hx - sum_Os_wi_Hy * ux_I;                                       // uy
-    A(0, 2) = -OMEGA * sum_Os_wi_Hxx * ux_I;                                               // ux ux
-    A(0, 3) = -real_t(2) * OMEGA * sum_Os_wi_Hxy * ux_I;                                   // ux uy
-    A(0, 4) = -OMEGA * sum_Os_wi_Hyy * ux_I;                                               // uy uy
-    A(0, 5) = sum_Is_wi_Hxx_Hx - (real_t(1) - OMEGA) * sum_Os_wi_Hxx * ux_I;               // mxx
-    A(0, 6) = real_t(2) * (sum_Is_wi_Hxy_Hx - (real_t(1) - OMEGA) * sum_Os_wi_Hxy * ux_I); // mxy
-    A(0, 7) = sum_Is_wi_Hyy_Hx - (real_t(1) - OMEGA) * sum_Os_wi_Hyy * ux_I;               // myy
+    A(0, 0) = sum_Is_wi_Hx_Hx - sum_Os_wi_Hx * ux_I;                                                 // ux
+    A(0, 1) = sum_Is_wi_Hy_Hx - sum_Os_wi_Hy * ux_I;                                                 // uy
+    A(0, 2) = -Geometry::OMEGA * sum_Os_wi_Hxx * ux_I;                                               // ux ux
+    A(0, 3) = -real_t(2) * Geometry::OMEGA * sum_Os_wi_Hxy * ux_I;                                   // ux uy
+    A(0, 4) = -Geometry::OMEGA * sum_Os_wi_Hyy * ux_I;                                               // uy uy
+    A(0, 5) = sum_Is_wi_Hxx_Hx - (real_t(1) - Geometry::OMEGA) * sum_Os_wi_Hxx * ux_I;               // mxx
+    A(0, 6) = real_t(2) * (sum_Is_wi_Hxy_Hx - (real_t(1) - Geometry::OMEGA) * sum_Os_wi_Hxy * ux_I); // mxy
+    A(0, 7) = sum_Is_wi_Hyy_Hx - (real_t(1) - Geometry::OMEGA) * sum_Os_wi_Hyy * ux_I;               // myy
 
     b_coeff[0] = ux_I * sum_Os_wi - sum_Is_wi_Hx;
 
     // uyI equation
-    A(1, 0) = sum_Is_wi_Hx_Hy - sum_Os_wi_Hx * uy_I;                                       // ux
-    A(1, 1) = sum_Is_wi_Hy_Hy - sum_Os_wi_Hy * uy_I;                                       // uy
-    A(1, 2) = -OMEGA * sum_Os_wi_Hxx * uy_I;                                               // ux ux
-    A(1, 3) = -real_t(2) * OMEGA * sum_Os_wi_Hxy * uy_I;                                   // ux uy
-    A(1, 4) = -OMEGA * sum_Os_wi_Hyy * uy_I;                                               // uy uy
-    A(1, 5) = sum_Is_wi_Hxx_Hy - (real_t(1) - OMEGA) * sum_Os_wi_Hxx * uy_I;               // mxx
-    A(1, 6) = real_t(2) * (sum_Is_wi_Hxy_Hy - (real_t(1) - OMEGA) * sum_Os_wi_Hxy * uy_I); // mxy
-    A(1, 7) = sum_Is_wi_Hyy_Hy - (real_t(1) - OMEGA) * sum_Os_wi_Hyy * uy_I;               // myy
+    A(1, 0) = sum_Is_wi_Hx_Hy - sum_Os_wi_Hx * uy_I;                                                 // ux
+    A(1, 1) = sum_Is_wi_Hy_Hy - sum_Os_wi_Hy * uy_I;                                                 // uy
+    A(1, 2) = -Geometry::OMEGA * sum_Os_wi_Hxx * uy_I;                                               // ux ux
+    A(1, 3) = -real_t(2) * Geometry::OMEGA * sum_Os_wi_Hxy * uy_I;                                   // ux uy
+    A(1, 4) = -Geometry::OMEGA * sum_Os_wi_Hyy * uy_I;                                               // uy uy
+    A(1, 5) = sum_Is_wi_Hxx_Hy - (real_t(1) - Geometry::OMEGA) * sum_Os_wi_Hxx * uy_I;               // mxx
+    A(1, 6) = real_t(2) * (sum_Is_wi_Hxy_Hy - (real_t(1) - Geometry::OMEGA) * sum_Os_wi_Hxy * uy_I); // mxy
+    A(1, 7) = sum_Is_wi_Hyy_Hy - (real_t(1) - Geometry::OMEGA) * sum_Os_wi_Hyy * uy_I;               // myy
 
     b_coeff[1] = uy_I * sum_Os_wi - sum_Is_wi_Hy;
 
     // mxxI equation
-    A(2, 0) = sum_Is_wi_Hx_Hxx - sum_Os_wi_Hx * mxx_I;                                       // ux
-    A(2, 1) = sum_Is_wi_Hy_Hxx - sum_Os_wi_Hy * mxx_I;                                       // uy
-    A(2, 2) = -OMEGA * sum_Os_wi_Hxx * mxx_I;                                                // ux ux
-    A(2, 3) = -real_t(2) * OMEGA * sum_Os_wi_Hxy * mxx_I;                                    // ux uy
-    A(2, 4) = -OMEGA * sum_Os_wi_Hyy * mxx_I;                                                // uy uy
-    A(2, 5) = sum_Is_wi_Hxx_Hxx - (real_t(1) - OMEGA) * sum_Os_wi_Hxx * mxx_I;               // mxx
-    A(2, 6) = real_t(2) * (sum_Is_wi_Hxy_Hxx - (real_t(1) - OMEGA) * sum_Os_wi_Hxy * mxx_I); // mxy
-    A(2, 7) = sum_Is_wi_Hyy_Hxx - (real_t(1) - OMEGA) * sum_Os_wi_Hyy * mxx_I;               // myy
+    A(2, 0) = sum_Is_wi_Hx_Hxx - sum_Os_wi_Hx * mxx_I;                                                 // ux
+    A(2, 1) = sum_Is_wi_Hy_Hxx - sum_Os_wi_Hy * mxx_I;                                                 // uy
+    A(2, 2) = -Geometry::OMEGA * sum_Os_wi_Hxx * mxx_I;                                                // ux ux
+    A(2, 3) = -real_t(2) * Geometry::OMEGA * sum_Os_wi_Hxy * mxx_I;                                    // ux uy
+    A(2, 4) = -Geometry::OMEGA * sum_Os_wi_Hyy * mxx_I;                                                // uy uy
+    A(2, 5) = sum_Is_wi_Hxx_Hxx - (real_t(1) - Geometry::OMEGA) * sum_Os_wi_Hxx * mxx_I;               // mxx
+    A(2, 6) = real_t(2) * (sum_Is_wi_Hxy_Hxx - (real_t(1) - Geometry::OMEGA) * sum_Os_wi_Hxy * mxx_I); // mxy
+    A(2, 7) = sum_Is_wi_Hyy_Hxx - (real_t(1) - Geometry::OMEGA) * sum_Os_wi_Hyy * mxx_I;               // myy
 
     b_coeff[2] = mxx_I * sum_Os_wi - sum_Is_wi_Hxx;
 
     // mxyI equation
-    A(3, 0) = sum_Is_wi_Hx_Hxy - sum_Os_wi_Hx * mxy_I;                                       // ux
-    A(3, 1) = sum_Is_wi_Hy_Hxy - sum_Os_wi_Hy * mxy_I;                                       // uy
-    A(3, 2) = -OMEGA * sum_Os_wi_Hxx * mxy_I;                                                // ux ux
-    A(3, 3) = -real_t(2) * OMEGA * sum_Os_wi_Hxy * mxy_I;                                    // ux uy
-    A(3, 4) = -OMEGA * sum_Os_wi_Hyy * mxy_I;                                                // uy uy
-    A(3, 5) = sum_Is_wi_Hxx_Hxy - (real_t(1) - OMEGA) * sum_Os_wi_Hxx * mxy_I;               // mxx
-    A(3, 6) = real_t(2) * (sum_Is_wi_Hxy_Hxy - (real_t(1) - OMEGA) * sum_Os_wi_Hxy * mxy_I); // mxy
-    A(3, 7) = sum_Is_wi_Hyy_Hxy - (real_t(1) - OMEGA) * sum_Os_wi_Hyy * mxy_I;               // myy
+    A(3, 0) = sum_Is_wi_Hx_Hxy - sum_Os_wi_Hx * mxy_I;                                                 // ux
+    A(3, 1) = sum_Is_wi_Hy_Hxy - sum_Os_wi_Hy * mxy_I;                                                 // uy
+    A(3, 2) = -Geometry::OMEGA * sum_Os_wi_Hxx * mxy_I;                                                // ux ux
+    A(3, 3) = -real_t(2) * Geometry::OMEGA * sum_Os_wi_Hxy * mxy_I;                                    // ux uy
+    A(3, 4) = -Geometry::OMEGA * sum_Os_wi_Hyy * mxy_I;                                                // uy uy
+    A(3, 5) = sum_Is_wi_Hxx_Hxy - (real_t(1) - Geometry::OMEGA) * sum_Os_wi_Hxx * mxy_I;               // mxx
+    A(3, 6) = real_t(2) * (sum_Is_wi_Hxy_Hxy - (real_t(1) - Geometry::OMEGA) * sum_Os_wi_Hxy * mxy_I); // mxy
+    A(3, 7) = sum_Is_wi_Hyy_Hxy - (real_t(1) - Geometry::OMEGA) * sum_Os_wi_Hyy * mxy_I;               // myy
 
     b_coeff[3] = mxy_I * sum_Os_wi - sum_Is_wi_Hxy;
 
     // myyI equation
-    A(4, 0) = sum_Is_wi_Hx_Hyy - sum_Os_wi_Hx * myy_I;                                       // ux
-    A(4, 1) = sum_Is_wi_Hy_Hyy - sum_Os_wi_Hy * myy_I;                                       // uy
-    A(4, 2) = -OMEGA * sum_Os_wi_Hxx * myy_I;                                                // ux ux
-    A(4, 3) = -real_t(2) * OMEGA * sum_Os_wi_Hxy * myy_I;                                    // ux uy
-    A(4, 4) = -OMEGA * sum_Os_wi_Hyy * myy_I;                                                // uy uy
-    A(4, 5) = sum_Is_wi_Hxx_Hyy - (real_t(1) - OMEGA) * sum_Os_wi_Hxx * myy_I;               // mxx
-    A(4, 6) = real_t(2) * (sum_Is_wi_Hxy_Hyy - (real_t(1) - OMEGA) * sum_Os_wi_Hxy * myy_I); // mxy
-    A(4, 7) = sum_Is_wi_Hyy_Hyy - (real_t(1) - OMEGA) * sum_Os_wi_Hyy * myy_I;               // myy
+    A(4, 0) = sum_Is_wi_Hx_Hyy - sum_Os_wi_Hx * myy_I;                                                 // ux
+    A(4, 1) = sum_Is_wi_Hy_Hyy - sum_Os_wi_Hy * myy_I;                                                 // uy
+    A(4, 2) = -Geometry::OMEGA * sum_Os_wi_Hxx * myy_I;                                                // ux ux
+    A(4, 3) = -real_t(2) * Geometry::OMEGA * sum_Os_wi_Hxy * myy_I;                                    // ux uy
+    A(4, 4) = -Geometry::OMEGA * sum_Os_wi_Hyy * myy_I;                                                // uy uy
+    A(4, 5) = sum_Is_wi_Hxx_Hyy - (real_t(1) - Geometry::OMEGA) * sum_Os_wi_Hxx * myy_I;               // mxx
+    A(4, 6) = real_t(2) * (sum_Is_wi_Hxy_Hyy - (real_t(1) - Geometry::OMEGA) * sum_Os_wi_Hxy * myy_I); // mxy
+    A(4, 7) = sum_Is_wi_Hyy_Hyy - (real_t(1) - Geometry::OMEGA) * sum_Os_wi_Hyy * myy_I;               // myy
 
     b_coeff[4] = myy_I * sum_Os_wi - sum_Is_wi_Hyy;
 
@@ -278,9 +278,9 @@ __device__ inline void evaluate_fluid_node(
     real_t rho_denom = (sum_Os_wi +
                         sum_Os_wi_Hx * ux +
                         sum_Os_wi_Hy * uy +
-                        sum_Os_wi_Hxx * ((1 - OMEGA) * mxx + OMEGA * ux * ux) +
-                        real_t(2) * sum_Os_wi_Hxy * ((1 - OMEGA) * mxy + OMEGA * ux * uy) +
-                        sum_Os_wi_Hyy * ((1 - OMEGA) * myy + OMEGA * uy * uy));
+                        sum_Os_wi_Hxx * ((1 - Geometry::OMEGA) * mxx + Geometry::OMEGA * ux * ux) +
+                        real_t(2) * sum_Os_wi_Hxy * ((1 - Geometry::OMEGA) * mxy + Geometry::OMEGA * ux * uy) +
+                        sum_Os_wi_Hyy * ((1 - Geometry::OMEGA) * myy + Geometry::OMEGA * uy * uy));
 
     real_t inv_rho_denom = real_t(1) / rho_denom;
 

@@ -1,13 +1,13 @@
 #include "lbm_state.cuh"
 #include "../../core/cuda_utils.cuh"
-#include "../../core/active_geometry.cuh"
+#include "../../geometries/active_geometry.cuh"
 #include "../../core/indexing.cuh"
 #include "../../core/memory.cuh"
 
 LBMState lbm_allocate_state()
 {
     LBMState S{};
-    S.N = static_cast<size_t>(NX) * static_cast<size_t>(NY);
+    S.N = static_cast<size_t>(Geometry::NX) * static_cast<size_t>(Geometry::NY);
     S.bytes_field = S.N * sizeof(real_t);
     S.cur = 0;
 

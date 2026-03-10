@@ -1,7 +1,7 @@
 #include "lbm_init_state.cuh"
 #include <cuda_runtime.h>
 
-#include "../core/active_geometry.cuh"
+#include "../geometries/active_geometry.cuh"
 #include "../core/indexing.cuh"
 #include "../core/cuda_utils.cuh"
 
@@ -15,7 +15,7 @@ __global__ void init_on_device(LBMState S)
     if (idx == INVALID_INDEX)
         return;
 
-    const real_t rho = RHO_0;
+    const real_t rho = Geometry::RHO_0;
     const real_t ux = real_t(0);
     const real_t uy = real_t(0);
 
@@ -24,7 +24,7 @@ __global__ void init_on_device(LBMState S)
 
     const int c = S.cur;
 
-    S.d_rho[c][idx] = rho - RHO_0;
+    S.d_rho[c][idx] = rho - Geometry::RHO_0;
     S.d_ux[c][idx] = ux * Stencil::as2;
     S.d_uy[c][idx] = uy * Stencil::as2;
 

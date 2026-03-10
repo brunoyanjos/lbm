@@ -2,7 +2,7 @@
 
 #include "../../core/types.cuh"
 #include "lbm_state.cuh"
-#include "../../core/active_geometry.cuh"
+#include "../../geometries/active_geometry.cuh"
 
 __device__ __forceinline__ void store_next_state(const LBMState &S,
                                                  int n,
@@ -11,7 +11,7 @@ __device__ __forceinline__ void store_next_state(const LBMState &S,
                                                  real_t ux, real_t uy,
                                                  real_t mxx, real_t mxy, real_t myy)
 {
-    S.d_rho[n][idx] = rho - RHO_0;
+    S.d_rho[n][idx] = rho - Geometry::RHO_0;
     S.d_ux[n][idx] = ux;
     S.d_uy[n][idx] = uy;
     S.d_mxx[n][idx] = mxx;

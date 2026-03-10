@@ -3,7 +3,7 @@
 #include "../../core/types.cuh"
 #include "../../core/linear_solver.cuh"
 #include "../domain/mask_utils.cuh"
-#include "../../core/active_geometry.cuh"
+#include "../../geometries/active_geometry.cuh"
 #include "../../core/math_utils.cuh"
 #include <cstdint>
 
@@ -53,7 +53,7 @@ __device__ inline void evaluate_fluid_boundary(
     real_t A_myy[6]{};
 
     real_t c, s, r;
-    polar_unit_vectors(x, y, c, s, r);
+    polar_unit_vectors(x, y, x, y, c, s, r);
 
 #pragma unroll
     for (int i = 0; i < Stencil::Q; ++i)
@@ -100,12 +100,12 @@ __device__ inline void evaluate_fluid_boundary(
             A_rho[0] += factors[0];
             A_rho[1] += factors[1];
             A_rho[2] += factors[2];
-            A_rho[3] += OMEGA * factors[3];
-            A_rho[4] += OMEGA * factors[4];
-            A_rho[5] += OMEGA * factors[5];
-            A_rho[6] += (r::one - OMEGA) * factors[3];
-            A_rho[7] += (r::one - OMEGA) * factors[4];
-            A_rho[8] += (r::one - OMEGA) * factors[5];
+            A_rho[3] += Geometry::OMEGA * factors[3];
+            A_rho[4] += Geometry::OMEGA * factors[4];
+            A_rho[5] += Geometry::OMEGA * factors[5];
+            A_rho[6] += (r::one - Geometry::OMEGA) * factors[3];
+            A_rho[7] += (r::one - Geometry::OMEGA) * factors[4];
+            A_rho[8] += (r::one - Geometry::OMEGA) * factors[5];
 
 #if STRONG_CONSERVATION_UX
             A_ux[0] += factors[0] * cx;
@@ -170,34 +170,34 @@ __device__ inline void evaluate_fluid_boundary(
     b_coeff[0] = -ux_I * A_rho[0] - A_ux[0];
 #endif
 #else
-    const real_t delta = r_cast(0.1);
+    // const real_t delta = r_cast(0.1);
 
-    if (y < NY / 2)
-    {
-        A(0, 0) = 1;                             // ux
-        A(0, 1) = r::zero;                       // uy
-        A(0, 2) = r::zero;                       // ux ux
-        A(0, 3) = -Stencil::as2 * OMEGA * delta; // ux uy
-        A(0, 4) = r::zero;                       // uy uy
-        A(0, 5) = r::zero;                       // mxx
-        A(0, 6) = Stencil::as2 * OMEGA * delta;  // mxy
-        A(0, 7) = r::zero;                       // myy
+    // if (y < NY / 2)
+    // {
+    //     A(0, 0) = 1;                             // ux
+    //     A(0, 1) = r::zero;                       // uy
+    //     A(0, 2) = r::zero;                       // ux ux
+    //     A(0, 3) = -Stencil::as2 * OMEGA * delta; // ux uy
+    //     A(0, 4) = r::zero;                       // uy uy
+    //     A(0, 5) = r::zero;                       // mxx
+    //     A(0, 6) = Stencil::as2 * OMEGA * delta;  // mxy
+    //     A(0, 7) = r::zero;                       // myy
 
-        b_coeff[1] = r::zero;
-    }
-    else
-    {
-        A(0, 0) = 1;                             // ux
-        A(0, 1) = r::zero;                       // uy
-        A(0, 2) = r::zero;                       // ux ux
-        A(0, 3) = Stencil::as2 * OMEGA * delta;  // ux uy
-        A(0, 4) = r::zero;                       // uy uy
-        A(0, 5) = r::zero;                       // mxx
-        A(0, 6) = -Stencil::as2 * OMEGA * delta; // mxy
-        A(0, 7) = r::zero;                       // myy
+    //     b_coeff[1] = r::zero;
+    // }
+    // else
+    // {
+    //     A(0, 0) = 1;                             // ux
+    //     A(0, 1) = r::zero;                       // uy
+    //     A(0, 2) = r::zero;                       // ux ux
+    //     A(0, 3) = Stencil::as2 * OMEGA * delta;  // ux uy
+    //     A(0, 4) = r::zero;                       // uy uy
+    //     A(0, 5) = r::zero;                       // mxx
+    //     A(0, 6) = -Stencil::as2 * OMEGA * delta; // mxy
+    //     A(0, 7) = r::zero;                       // myy
 
-        b_coeff[1] = U_MAX;
-    }
+    //     b_coeff[1] = U_MAX;
+    // }
 #endif
 
     // uyI equation
@@ -265,32 +265,32 @@ __device__ inline void evaluate_fluid_boundary(
 
     // mxyI equation
 #if EQUATION_ON_MXY
-    if (r < (R_IN + R_OUT) * r::half)
-    {
-        A(3, 0) = r::zero;                            // ux
-        A(3, 1) = 1;                                  // uy
-        A(3, 2) = r::zero;                            // ux ux
-        A(3, 3) = -Stencil::as2 * OMEGA * (r - R_IN); // ux uy
-        A(3, 4) = r::zero;                            // uy uy
-        A(3, 5) = r::zero;                            // mxx
-        A(3, 6) = Stencil::as2 * OMEGA * (r - R_IN);  // mxy
-        A(3, 7) = r::zero;                            // myy
+    // if (r < (Geometry::R_IN + Geometry::R_OUT) * r::half)
+    // {
+    //     A(3, 0) = r::zero;                            // ux
+    //     A(3, 1) = 1;                                  // uy
+    //     A(3, 2) = r::zero;                            // ux ux
+    //     A(3, 3) = -Stencil::as2 * Geometry::OMEGA * (r - R_IN); // ux uy
+    //     A(3, 4) = r::zero;                            // uy uy
+    //     A(3, 5) = r::zero;                            // mxx
+    //     A(3, 6) = Stencil::as2 * Geometry::OMEGA * (r - R_IN);  // mxy
+    //     A(3, 7) = r::zero;                            // myy
 
-        b_coeff[3] = U_MAX;
-    }
-    else
-    {
-        A(3, 0) = r::zero;                             // ux
-        A(3, 1) = 1;                                   // uy
-        A(3, 2) = r::zero;                             // ux ux
-        A(3, 3) = Stencil::as2 * OMEGA * (R_OUT - r);  // ux uy
-        A(3, 4) = r::zero;                             // uy uy
-        A(3, 5) = r::zero;                             // mxx
-        A(3, 6) = -Stencil::as2 * OMEGA * (R_OUT - r); // mxy
-        A(3, 7) = r::zero;                             // myy
+    //     b_coeff[3] = Geometry::U_MAX;
+    // }
+    // else
+    // {
+    //     A(3, 0) = r::zero;                             // ux
+    //     A(3, 1) = 1;                                   // uy
+    //     A(3, 2) = r::zero;                             // ux ux
+    //     A(3, 3) = Stencil::as2 * Geometry::OMEGA * (Geometry::R_OUT - r);  // ux uy
+    //     A(3, 4) = r::zero;                             // uy uy
+    //     A(3, 5) = r::zero;                             // mxx
+    //     A(3, 6) = -Stencil::as2 * Geometry::OMEGA * (Geometry::R_OUT - r); // mxy
+    //     A(3, 7) = r::zero;                             // myy
 
-        b_coeff[3] = r::zero;
-    }
+    //     b_coeff[3] = r::zero;
+    // }
 #else
     A(3, 0) = A_mxy[1] - A_rho[1] * mxy_I; // ux
     A(3, 1) = A_mxy[2] - A_rho[2] * mxy_I; // uy

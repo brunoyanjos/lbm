@@ -8,9 +8,8 @@
 #include "moment_evaluation/moment_scaling.cuh"
 #include "state/state_store.cuh"
 #include "population/pop_reconstruction.cuh"
-#include "domain/active_geometry.cuh"
 
-#include "../core/active_geometry.cuh"
+#include "../geometries/active_geometry.cuh"
 #include "../core/indexing.cuh"
 #include "../core/cuda_utils.cuh"
 #include "../core/cuda_utils.cuh"
@@ -68,7 +67,7 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
         }
         else if (count_valid_dirs(valid_ms) < 8)
         {
-            rho = S.d_rho[c][idx] + RHO_0;
+            rho = S.d_rho[c][idx] + Geometry::RHO_0;
             ux = S.d_ux[c][idx] / Stencil::as2;
             uy = S.d_uy[c][idx] / Stencil::as2;
             mxx = S.d_mxx[c][idx] / (Stencil::as4 * r::half);
@@ -79,7 +78,7 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
         }
         else
         {
-            rho = S.d_rho[c][idx] + RHO_0;
+            rho = S.d_rho[c][idx] + Geometry::RHO_0;
             ux = S.d_ux[c][idx] / Stencil::as2;
             uy = S.d_uy[c][idx] / Stencil::as2;
             mxx = S.d_mxx[c][idx] / (Stencil::as4 * r::half);
