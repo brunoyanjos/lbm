@@ -21,6 +21,7 @@ set -euo pipefail
 : "${REAL:=float}"
 : "${RUN:=1}"
 : "${RE:=}"
+: "${REG_ORDER:=2}"
 : "${RUN_ID:=}"
 : "${STENCIL:=D2Q9}"
 : "${VERBOSE:=0}"
@@ -71,6 +72,7 @@ while [[ $# -gt 0 ]]; do
     --exec)           EXEC_NAME="$2"; shift 2 ;;
     --build_root)     BUILD_ROOT="$2"; shift 2 ;;
     --out_root)       OUT_ROOT="$2"; shift 2 ;;
+    --reg_order)      REG_ORDER="$2"; shift 2 ;;
     --run_id)         RUN_ID="$2"; shift 2 ;;
     --io)             IO="$2"; shift 2 ;;
     --warmup)         WARMUP="$2"; shift 2 ;;
@@ -82,13 +84,14 @@ while [[ $# -gt 0 ]]; do
     -h|--help)
       cat <<EOF
 Usage:
-  GEOM=square_cavity STENCIL=D2Q9 REAL=float ./compile.sh
-  ./compile.sh --geom annul --stencil D2Q9 --real float --run 1
+  GEOM=square_cavity STENCIL=D2Q9 REAL=float bash compile.sh
+  bash compile.sh --geom annul --stencil D2Q9 --real float --run 1 --reg_order 3
 
 Valid:
   --geom: annul | channel | couette | jet | square_cavity
   --stencil: D2Q9 | D2V17
   --real: float | double
+  --reg_order: 2 | 3
 EOF
       exit 0
       ;;
@@ -104,6 +107,7 @@ done
 
 case "${STENCIL}" in D2Q9|D2V17) ;; *) die "Unknown STENCIL='${STENCIL}'" ;; esac
 case "${REAL}" in float|double) ;; *) die "Unknown REAL='${REAL}'" ;; esac
+case "${REG_ORDER}" in 2|3) ;; *) die "Unknown REG_ORDER='${REG_ORDER}' (allowed: 2 or 3)" ;; esac
 case "${GEOM}" in annul|channel|couette|jet|square_cavity) ;; *) die "Unknown GEOM='${GEOM}'" ;; esac
 
 # =====================================================
@@ -131,13 +135,13 @@ mapfile -t GENCODES < <(make_gencodes "${ARCHES}")
 # Build dirs
 # =====================================================
 
-CFG_TAG="${STENCIL}_${REAL}_${GEOM}"
+CFG_TAG="${STENCIL}_${REAL}_${GEOM}_reg${REG_ORDER}"
 BUILD_DIR="${BUILD_ROOT}/${CFG_TAG}"
 OBJ_DIR="${BUILD_DIR}/obj"
 BIN_PATH="${BUILD_DIR}/${EXEC_NAME}"
 
 echo "ARCHES: ${ARCHES}"
-echo "STENCIL=${STENCIL} REAL=${REAL} GEOM=${GEOM}"
+echo "STENCIL=${STENCIL} REAL=${REAL} GEOM=${GEOM} REG_ORDER=${REG_ORDER}"
 echo "DEBUG=${DEBUG} RDC=${RDC} CLEAN=${CLEAN}"
 echo "BUILD_DIR: ${BUILD_DIR}"
 
@@ -177,6 +181,8 @@ fi
 
 # geometry macro (NOVO)
 NVCCFLAGS+=("${GEOM_DEF}")
+
+NVCCFLAGS+=(-DLBM_REG_ORDER="${REG_ORDER}")
 
 # RE macro (se você usa isso em compile-time)
 if [[ -n "${RE}" ]]; then
@@ -241,7 +247,7 @@ echo "✔ Build successful: ${BIN_PATH}"
 
 if [[ "${RUN}" == "1" ]]; then
   if [[ -z "${RUN_ID}" ]]; then
-    RUN_ID="$(date +%Y%m%d_%H%M%S)_${STENCIL}_${REAL}_${GEOM}${RE:+_RE${RE}}"
+    RUN_ID="$(date +%Y%m%d_%H%M%S)_${STENCIL}_${REAL}_${GEOM}_REG${REG_ORDER}${RE:+_RE${RE}}"
   fi
 
   OUT_DIR="${OUT_ROOT}/${RUN_ID}"

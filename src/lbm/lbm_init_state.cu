@@ -7,6 +7,7 @@
 
 #include "lbm_equilibrium.cuh"
 #include "stencil_active.cuh"
+#include "../core/lbm_config.cuh"
 
 __global__ void init_on_device(LBMState S)
 {
@@ -34,24 +35,49 @@ __global__ void init_on_device(LBMState S)
     real_t mxy = real_t(0);
     real_t myy = real_t(0);
 
+#if LBM_HAS_REG3_CROSS
+    real_t mxxy = real_t(0);
+    real_t mxyy = real_t(0);
+#endif
+
+#if LBM_HAS_REG3_AXIAL
+    real_t mxxx = real_t(0);
+    real_t myyy = real_t(0);
+#endif
+
 #pragma unroll
     for (int i = 0; i < Stencil::Q; ++i)
     {
-        const real_t cx = static_cast<real_t>(Stencil::cx(i));
-        const real_t cy = static_cast<real_t>(Stencil::cy(i));
+        const auto B = Stencil::basis(i);
 
-        const real_t Hxx = cx * cx - Stencil::cs2;
-        const real_t Hxy = cx * cy;
-        const real_t Hyy = cy * cy - Stencil::cs2;
+        mxx += pop[i] * B.Hxx;
+        mxy += pop[i] * B.Hxy;
+        myy += pop[i] * B.Hyy;
 
-        mxx += pop[i] * Hxx;
-        mxy += pop[i] * Hxy;
-        myy += pop[i] * Hyy;
+#if LBM_HAS_REG3_CROSS
+        mxxy += pop[i] * B.Hxxy;
+        mxyy += pop[i] * B.Hx;
+#endif
+
+#if LBM_HAS_REG3_AXIAL
+        mxxx += pop[i] * Hxxx;
+        myyy += pop[i] * Hyyy;
+#endif
     }
 
-    S.d_mxx[c][idx] = mxx * inv_rho * (Stencil::as4 * real_t(0.5));
-    S.d_mxy[c][idx] = mxy * inv_rho * Stencil::as4;
-    S.d_myy[c][idx] = myy * inv_rho * (Stencil::as4 * real_t(0.5));
+    S.d2.mxx[c][idx] = mxx * inv_rho * (Stencil::as4 * r::half);
+    S.d2.mxy[c][idx] = mxy * inv_rho * Stencil::as4;
+    S.d2.myy[c][idx] = myy * inv_rho * (Stencil::as4 * r::half);
+
+#if LBM_HAS_REG3_CROSS
+    S.d3c.mxxy[c][idx] = mxxy * inv_rho * (Stencil::as6 * r::half);
+    S.d3c.mxyy[c][idx] = mxyy * inv_rho * (Stencil::as6 * r::half);
+#endif
+
+#if LBM_HAS_REG3_AXIAL
+    S.d3a.mxxx[c][idx] = mxxx * inv_rho * (Stencil::as6 * r::sixth);
+    S.d3a.myyy[c][idx] = myyy * inv_rho * (Stencil::as6 * r::sixth);
+#endif
 }
 
 void init_state(LBMState &S, const CudaConfig &cfg)
@@ -70,7 +96,18 @@ void upload_state_to_host(LBMState &S)
     CUDA_CHECK(cudaMemcpy(S.h_rho, S.d_rho[c], S.bytes_field, cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(S.h_ux, S.d_ux[c], S.bytes_field, cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(S.h_uy, S.d_uy[c], S.bytes_field, cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(S.h_mxx, S.d_mxx[c], S.bytes_field, cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(S.h_mxy, S.d_mxy[c], S.bytes_field, cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(S.h_myy, S.d_myy[c], S.bytes_field, cudaMemcpyDeviceToHost));
+
+    CUDA_CHECK(cudaMemcpy(S.h2.mxx, S.d2.mxx[c], S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h2.mxy, S.d2.mxy[c], S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h2.myy, S.d2.myy[c], S.bytes_field, cudaMemcpyDeviceToHost));
+
+#if LBM_HAS_REG3_CROSS
+    CUDA_CHECK(cudaMemcpy(S.h3c.mxxy, S.d3c.mxxy[c], S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h3c.mxyy, S.d3c.mxyy[c], S.bytes_field, cudaMemcpyDeviceToHost));
+#endif
+
+#if LBM_HAS_REG3_AXIAL
+    CUDA_CHECK(cudaMemcpy(S.h3a.mxxx, S.d3a.mxxx[c], S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h3a.myyy, S.d3a.myyy[c], S.bytes_field, cudaMemcpyDeviceToHost));
+#endif
 }

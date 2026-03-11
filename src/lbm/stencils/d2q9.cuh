@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../core/types.cuh"
+#include "../../core/lbm_config.cuh"
 
 namespace D2Q9
 {
@@ -9,6 +10,17 @@ namespace D2Q9
     constexpr real_t cs2 = r_cast(1.0) / r_cast(3.0);
     constexpr real_t as2 = r_cast(1.0) / cs2;
     constexpr real_t as4 = as2 * as2;
+    constexpr real_t as6 = as4 * as2;
+
+    struct Basis
+    {
+        real_t cx, cy;
+        real_t Hxx, Hxy, Hyy;
+
+#if LBM_HAS_REG3_CROSS
+        real_t Hxxy, Hxyy;
+#endif
+    };
 
     __host__ __device__ __forceinline__ int cx(int i)
     {
@@ -76,23 +88,23 @@ namespace D2Q9
         }
     }
 
-    __host__ __device__ __forceinline__ void basis2(int i, real_t &cx, real_t &cy, real_t &Hxx, real_t &Hxy, real_t &Hyy)
+    __host__ __device__ __forceinline__ Basis basis(int i)
     {
-        cx = r_cast(D2Q9::cx(i));
-        cy = r_cast(D2Q9::cy(i));
-        Hxx = cx * cx - D2Q9::cs2;
-        Hxy = cx * cy;
-        Hyy = cy * cy - D2Q9::cs2;
-    }
+        Basis b{};
 
-    __host__ __device__ __forceinline__ void basis2polar(int i, real_t c, real_t s,
-                                                         real_t &cx, real_t &cy, real_t &Hxx, real_t &Hxy, real_t &Hyy)
-    {
-        cx = r_cast(D2Q9::cx(i)) * c + r_cast(D2Q9::cy(i)) * s;
-        cy = r_cast(D2Q9::cy(i)) * c - r_cast(D2Q9::cx(i)) * s;
-        Hxx = cx * cx - D2Q9::cs2;
-        Hxy = cx * cy;
-        Hyy = cy * cy - D2Q9::cs2;
+        b.cx = r_cast(D2Q9::cx(i));
+        b.cy = r_cast(D2Q9::cy(i));
+
+        b.Hxx = b.cx * b.cx - D2Q9::cs2;
+        b.Hxy = b.cx * b.cy;
+        b.Hyy = b.cy * b.cy - D2Q9::cs2;
+
+#if LBM_HAS_REG3_CROSS
+        b.Hxxy = b.Hxx * b.cy;
+        b.Hxyy = b.cx * b.Hyy;
+#endif
+
+        return b;
     }
 
     __host__ __device__ __forceinline__ int opp(int i)

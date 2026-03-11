@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../core/types.cuh"
+#include "../../core/lbm_config.cuh"
 
 namespace D2V17
 {
@@ -18,6 +19,20 @@ namespace D2V17
     constexpr real_t as6 = as4 * as2;
 
     constexpr real_t cs2 = static_cast<real_t>(1.0) / as2;
+
+    struct Basis
+    {
+        real_t cx, cy;
+        real_t Hxx, Hxy, Hyy;
+
+#if LBM_HAS_REG3_CROSS
+        real_t Hxxy, Hxyy;
+#endif
+
+#if LBM_HAS_REG3_AXIAL
+        real_t Hxxx, Hyyy;
+#endif
+    };
 
     __host__ __device__ __forceinline__ int cx(int i)
     {
@@ -128,23 +143,28 @@ namespace D2V17
         }
     }
 
-    __host__ __device__ __forceinline__ void basis2(int i, real_t &cx, real_t &cy, real_t &Hxx, real_t &Hxy, real_t &Hyy)
+    __host__ __device__ __forceinline__ Basis basis(int i)
     {
-        cx = static_cast<real_t>(D2V17::cx(i));
-        cy = static_cast<real_t>(D2V17::cy(i));
-        Hxx = cx * cx - D2V17::cs2;
-        Hxy = cx * cy;
-        Hyy = cy * cy - D2V17::cs2;
-    }
+        Basis b{};
 
-    __host__ __device__ __forceinline__ void basis2polar(int i, real_t c, real_t s,
-                                                         real_t &cx, real_t &cy, real_t &Hxx, real_t &Hxy, real_t &Hyy)
-    {
-        cx = r_cast(D2V17::cx(i)) * c + r_cast(D2V17::cy(i)) * s;
-        cy = r_cast(D2V17::cy(i)) * c - r_cast(D2V17::cx(i)) * s;
-        Hxx = cx * cx - D2V17::cs2;
-        Hxy = cx * cy;
-        Hyy = cy * cy - D2V17::cs2;
+        b.cx = r_cast(D2V17::cx(i));
+        b.cy = r_cast(D2V17::cy(i));
+
+        b.Hxx = b.cx * b.cx - D2V17::cs2;
+        b.Hxy = b.cx * b.cy;
+        b.Hyy = b.cy * b.cy - D2V17::cs2;
+
+#if LBM_HAS_REG3_CROSS
+        b.Hxxy = b.Hxx * b.cy;
+        b.Hxyy = b.cx * b.Hyy;
+#endif
+
+#if LBM_HAS_REG3_AXIAL
+        b.Hxxx = b.cx * b.cx * b.cx - r::three * D2V17::cs2 * b.cx;
+        b.Hyyy = b.cy * b.cy * b.cy - r::three * D2V17::cs2 * b.cy;
+#endif
+
+        return b;
     }
 
     __host__ __device__ __forceinline__ int opp(int i)

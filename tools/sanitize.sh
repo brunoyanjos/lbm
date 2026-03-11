@@ -1,37 +1,29 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# -------------------------------
-# Config (overridable)
-# -------------------------------
-: "${STENCIL:=D2V17}"     # D2Q9 | D2V17
-: "${REAL:=float}"        # float | double
+: "${STENCIL:=D2V17}"
+: "${REAL:=float}"
+: "${GEOM:=square_cavity}"
 : "${BUILD_ROOT:=build}"
 : "${EXEC_NAME:=sim}"
 
 : "${OUT_ROOT:=runs}"
-: "${RUN_ID:=}"           # se vazio, usa timestamp
-: "${ARGS:=--io 0 --progress 0 --verbose 0}"  # defaults p/ log limpo
+: "${RUN_ID:=}"
+: "${ARGS:=--io 0 --progress 0 --verbose 0}"
 
-# -------------------------------
-# Paths
-# -------------------------------
-CFG_TAG="${STENCIL}_${REAL}"
+CFG_TAG="${STENCIL}_${REAL}_${GEOM}"
 BIN="${BUILD_ROOT}/${CFG_TAG}/${EXEC_NAME}"
 
 [[ -x "${BIN}" ]] || { echo "Binary not found/executable: ${BIN}" >&2; exit 1; }
 
 if [[ -z "${RUN_ID}" ]]; then
-  RUN_ID="$(date +%Y%m%d_%H%M%S)"
+  RUN_ID="$(date +%Y%m%d_%H%M%S)_sanitize_${STENCIL}_${REAL}_${GEOM}"
 fi
 
 OUT_DIR="${OUT_ROOT}/${RUN_ID}"
 LOG_DIR="${OUT_DIR}/logs"
 mkdir -p "${LOG_DIR}"
 
-# -------------------------------
-# Sanitizer common flags
-# -------------------------------
 common=(
   --print-limit 1000
   --check-exit-code no
@@ -42,21 +34,22 @@ common=(
 run_tool () {
   local tool="$1"
   local log="${LOG_DIR}/${tool}.txt"
+
   echo "[SANITIZE] tool=${tool}"
   echo "  bin:  ${BIN}"
   echo "  args: ${ARGS}"
-  compute-sanitizer "${common[@]}" --tool="${tool}" "${BIN}" ${ARGS} \
-    > "${log}" 2>&1
+
+  compute-sanitizer "${common[@]}" --tool="${tool}" "${BIN}" ${ARGS} > "${log}" 2>&1
+  local code=$?
+
+  echo "  exit=${code}"
   echo "  -> log: ${log}"
+  return ${code}
 }
 
-# -------------------------------
-# Run (sequential)
-# -------------------------------
 run_tool memcheck
 run_tool initcheck
 
-# No WSL/WDDM, racecheck/synccheck podem falhar. Rodar best-effort.
 set +e
 run_tool racecheck
 echo "[WARN] racecheck exit=$?"

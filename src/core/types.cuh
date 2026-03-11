@@ -23,6 +23,10 @@ namespace r
     static constexpr real_t zero = real_t{0};
     static constexpr real_t one = real_t{1};
     static constexpr real_t two = real_t{2};
+    static constexpr real_t three = real_t{3};
+
     static constexpr real_t quarter = real_t{0.25};
+    static constexpr real_t third = real_t{1.0 / 3.0};
     static constexpr real_t half = real_t{0.5};
+    static constexpr real_t sixth = real_t{1.0 / 6.0};
 }

@@ -88,26 +88,3 @@ __device__ __forceinline__ bool gaussianElimination(real_t *__restrict__ A,
 
     return true;
 }
-
-__device__ __forceinline__ real_t rel_step(real_t x_new, real_t x_old)
-{
-    const real_t eps = real_t(1e-12);
-    const real_t denom = fmax(r_abs(x_new), eps);
-    return r_abs(x_new - x_old) / denom;
-}
-
-__device__ __forceinline__ real_t eval_row(
-    const real_t *__restrict__ A,
-    real_t B,
-    real_t ux, real_t uy,
-    real_t mxx, real_t mxy, real_t myy)
-{
-    const real_t ux2 = ux * ux;
-    const real_t uxuy = ux * uy;
-    const real_t uy2 = uy * uy;
-
-    return ux * A[0] + uy * A[1] +
-           ux2 * A[2] + uxuy * A[3] + uy2 * A[4] +
-           mxx * A[5] + mxy * A[6] + myy * A[7] -
-           B;
-}
