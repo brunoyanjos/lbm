@@ -18,9 +18,9 @@ __host__ __device__ __forceinline__ int wrap_x(int x)
 __host__ __device__ __forceinline__ int wrap_y(int y)
 {
     if (y < 0)
-        return y + Geometry::NY;
-    if (y >= Geometry::NY)
-        return y - Geometry::NY;
+        return y + 3;
+    if (y >= 3)
+        return y - 3;
     return y;
 }
 
@@ -47,6 +47,12 @@ __device__ __forceinline__ void threadXY(int &x, int &y)
         static_cast<int>(threadIdx.x);
     y = static_cast<int>(blockIdx.y) * static_cast<int>(blockDim.y) +
         static_cast<int>(threadIdx.y);
+}
+
+__device__ __forceinline__ int threadX()
+{
+    return static_cast<int>(blockIdx.x) * static_cast<int>(blockDim.x) +
+           static_cast<int>(threadIdx.x);
 }
 
 __device__ __forceinline__

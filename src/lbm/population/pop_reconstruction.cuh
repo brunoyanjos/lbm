@@ -6,7 +6,6 @@
 
 __device__ __forceinline__ void reconstruct_streamed_pop(real_t *__restrict__ pop,
                                                          const LBMState &S,
-                                                         int c,
                                                          int x, int y)
 {
 #pragma unroll
@@ -17,12 +16,12 @@ __device__ __forceinline__ void reconstruct_streamed_pop(real_t *__restrict__ po
 
         const size_t n_idx = idxGlobalPeriodic(x - icx, y - icy);
 
-        const real_t rho = S.d_rho[c][n_idx] + Geometry::RHO_0;
-        const real_t ux = S.d_ux[c][n_idx];
-        const real_t uy = S.d_uy[c][n_idx];
-        const real_t mxx = S.d_mxx[c][n_idx];
-        const real_t mxy = S.d_mxy[c][n_idx];
-        const real_t myy = S.d_myy[c][n_idx];
+        const real_t rho = S.d_rho[n_idx] + Geometry::RHO_0;
+        const real_t ux = S.d_ux[n_idx];
+        const real_t uy = S.d_uy[n_idx];
+        const real_t mxx = S.d_mxx[n_idx];
+        const real_t mxy = S.d_mxy[n_idx];
+        const real_t myy = S.d_myy[n_idx];
 
         const real_t cx = static_cast<real_t>(icx);
         const real_t cy = static_cast<real_t>(icy);

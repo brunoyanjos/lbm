@@ -9,7 +9,7 @@
 
 namespace SQUARE_CAVITY
 {
-    constexpr int NX = 128;
+    constexpr int NX = 1024;
     constexpr int NY = NX;
 
     constexpr real_t RE = static_cast<real_t>(LBM_RE);

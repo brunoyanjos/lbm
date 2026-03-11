@@ -8,7 +8,7 @@ CudaConfig make_config()
 {
     CudaConfig cfg;
 
-    cfg.block = dim3(32, 16);
+    cfg.block = dim3(32, 3);
 
     cfg.grid = dim3(
         (Geometry::NX + cfg.block.x - 1) / cfg.block.x,

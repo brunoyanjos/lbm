@@ -47,7 +47,6 @@ namespace app
         for (int t = 0; t < ctx.warmup_steps; ++t)
         {
             lbm_mom_step(state, cfg, tags);
-            state.cur ^= 1;
         }
         CUDA_CHECK(cudaDeviceSynchronize());
 
@@ -79,7 +78,6 @@ namespace app
         for (int t = t_begin; t < t_end; ++t)
         {
             lbm_mom_step(state, cfg, tags);
-            state.cur ^= 1;
 
             if (ctx.enable_io && (t % SAVE_INTERVAL == 0))
             {

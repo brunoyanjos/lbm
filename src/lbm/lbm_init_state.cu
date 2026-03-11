@@ -22,11 +22,9 @@ __global__ void init_on_device(LBMState S)
     real_t pop[Stencil::Q];
     equilibrium(pop, rho, ux, uy);
 
-    const int c = S.cur;
-
-    S.d_rho[c][idx] = rho - Geometry::RHO_0;
-    S.d_ux[c][idx] = ux * Stencil::as2;
-    S.d_uy[c][idx] = uy * Stencil::as2;
+    S.global_rho[idx] = rho - Geometry::RHO_0;
+    S.global_ux[idx] = ux * Stencil::as2;
+    S.global_uy[idx] = uy * Stencil::as2;
 
     const real_t inv_rho = real_t(1) / rho;
 
@@ -49,15 +47,13 @@ __global__ void init_on_device(LBMState S)
         myy += pop[i] * Hyy;
     }
 
-    S.d_mxx[c][idx] = mxx * inv_rho * (Stencil::as4 * real_t(0.5));
-    S.d_mxy[c][idx] = mxy * inv_rho * Stencil::as4;
-    S.d_myy[c][idx] = myy * inv_rho * (Stencil::as4 * real_t(0.5));
+    S.global_mxx[idx] = mxx * inv_rho * (Stencil::as4 * real_t(0.5));
+    S.global_mxy[idx] = mxy * inv_rho * Stencil::as4;
+    S.global_myy[idx] = myy * inv_rho * (Stencil::as4 * real_t(0.5));
 }
 
 void init_state(LBMState &S, const CudaConfig &cfg)
 {
-    S.cur = 0;
-
     init_on_device<<<cfg.grid, cfg.block>>>(S);
     CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaDeviceSynchronize());
@@ -65,12 +61,10 @@ void init_state(LBMState &S, const CudaConfig &cfg)
 
 void upload_state_to_host(LBMState &S)
 {
-    const int c = S.cur;
-
-    CUDA_CHECK(cudaMemcpy(S.h_rho, S.d_rho[c], S.bytes_field, cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(S.h_ux, S.d_ux[c], S.bytes_field, cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(S.h_uy, S.d_uy[c], S.bytes_field, cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(S.h_mxx, S.d_mxx[c], S.bytes_field, cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(S.h_mxy, S.d_mxy[c], S.bytes_field, cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(S.h_myy, S.d_myy[c], S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h_rho, S.global_rho, S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h_ux, S.global_ux, S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h_uy, S.global_uy, S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h_mxx, S.global_mxx, S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h_mxy, S.global_mxy, S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h_myy, S.global_myy, S.bytes_field, cudaMemcpyDeviceToHost));
 }

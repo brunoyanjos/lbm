@@ -47,6 +47,29 @@ __host__ inline void cudaMalloc2_safe(T *(&p)[2], size_t bytes)
 }
 
 template <typename T>
+__host__ inline void cudaMalloc_safe(T *&p, size_t bytes)
+{
+    p = nullptr;
+
+    cudaError_t e0 = cudaMalloc((void **)&p, bytes);
+    if (e0 != cudaSuccess)
+    {
+        p = nullptr;
+        CUDA_CHECK(e0);
+        return;
+    }
+
+    cudaError_t m0 = cudaMemset(p, 0, bytes);
+    if (m0 != cudaSuccess)
+    {
+        cudaFree(p);
+        p = nullptr;
+        CUDA_CHECK(m0);
+        return;
+    }
+}
+
+template <typename T>
 __host__ inline void cudaFree2_safe(T *(&p)[2])
 {
     if (p[0])
@@ -55,6 +78,14 @@ __host__ inline void cudaFree2_safe(T *(&p)[2])
         CUDA_CHECK(cudaFree(p[1]));
     p[0] = nullptr;
     p[1] = nullptr;
+}
+
+template <typename T>
+__host__ inline void cudaFree_safe(T *&p)
+{
+    CUDA_CHECK(cudaFree(p));
+
+    p = nullptr;
 }
 
 template <typename T>
