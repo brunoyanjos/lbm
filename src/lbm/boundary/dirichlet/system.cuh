@@ -6,22 +6,22 @@
 #include "../common/equation_row.cuh"
 #include "layout.cuh"
 
-struct DirichletSystem2D
+struct DirichletSystem
 {
-    IncomingMoments<DirichletIncomingList2D> incomings;
+    IncomingMoments<DirichletIncomingList> incomings;
 
-    EquationRow<DirichletVarList2D, DirichletNonlinearList2D> rho;
+    EquationRow<DirichletVarList, DirichletNonlinearList> rho;
 
-    LinearRow<DirichletVarList2D> mxx;
-    LinearRow<DirichletVarList2D> mxy;
-    LinearRow<DirichletVarList2D> myy;
+    LinearRow<DirichletVarList> mxx;
+    LinearRow<DirichletVarList> mxy;
+    LinearRow<DirichletVarList> myy;
 
-    __device__ __forceinline__ void normalize_known()
+    __device__ __forceinline__ void normalize_incomings()
     {
-        const real_t inv_rho = r::one / incomings.template get<MomentId2D::rho>();
+        const real_t inv_rho = r::one / incomings.template get<MomentId::rho>();
 
-        incomings.template get<MomentId2D::mxx>() *= inv_rho;
-        incomings.template get<MomentId2D::mxy>() *= inv_rho;
-        incomings.template get<MomentId2D::myy>() *= inv_rho;
+        incomings.template get<MomentId::mxx>() *= inv_rho;
+        incomings.template get<MomentId::mxy>() *= inv_rho;
+        incomings.template get<MomentId::myy>() *= inv_rho;
     }
 };

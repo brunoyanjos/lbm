@@ -28,7 +28,7 @@ __device__ __forceinline__ real_t eval_fluid_row(
 }
 
 __device__ __forceinline__ void build_fluid_jacobian(
-    const FluidNewtonCoefficients2D &C,
+    const FluidNewtonCoefficients &C,
     real_t ux,
     real_t uy,
     real_t *__restrict__ J)
@@ -48,7 +48,7 @@ __device__ __forceinline__ void build_fluid_jacobian(
 }
 
 __device__ __forceinline__ void build_fluid_rhs(
-    const FluidNewtonCoefficients2D &C,
+    const FluidNewtonCoefficients &C,
     real_t ux,
     real_t uy,
     real_t mxx,
@@ -62,7 +62,7 @@ __device__ __forceinline__ void build_fluid_rhs(
 }
 
 __device__ __forceinline__ void solve_fluid_newton(
-    const FluidNewtonCoefficients2D &C,
+    const FluidNewtonCoefficients &C,
     real_t &ux,
     real_t &uy,
     real_t &mxx,

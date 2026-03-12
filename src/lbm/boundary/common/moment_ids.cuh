@@ -1,6 +1,6 @@
 #pragma once
 
-enum class MomentId2D : int
+enum class MomentId : int
 {
     rho = 0,
     ux,
@@ -14,10 +14,4 @@ enum class MomentId2D : int
     mxxy,
     mxyy,
     myyy,
-
-    mxxxx,
-    mxxxy,
-    mxxyy,
-    mxyyy,
-    myyyy
 };

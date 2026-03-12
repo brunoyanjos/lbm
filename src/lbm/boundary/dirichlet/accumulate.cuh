@@ -3,56 +3,42 @@
 #include "../../../core/types.cuh"
 #include "../../../geometries/active_geometry.cuh"
 #include "../../stencil_active.cuh"
+#include "accumulate_incoming_moments.cuh"
+#include "accumulate_linear_row.cuh"
+#include "accumulate_nonlinear_row.cuh"
+#include "dirichlet_row.cuh"
 #include "system.cuh"
 #include "../common/factors.cuh"
+#include "../common/id_list.cuh"
+
+struct EqOp
+{
+    DirichletSystem &S;
+    const Stencil::Basis &B;
+    const Factors &F;
+
+    template <auto EqId>
+    __device__ __forceinline__ void operator()()
+    {
+        auto &row = dirichlet_row<EqId>(S);
+        accumulate_linear_row<EqId>(row, B, F);
+    }
+};
 
 __device__ __forceinline__ void accumulate_incoming_dirichlet(
-    DirichletSystem2D &S,
+    DirichletSystem &S,
     real_t pop_i,
     const Stencil::Basis &B,
-    const Factors2D &F)
+    const Factors &F)
 {
-    S.incomings.template get<MomentId2D::rho>() += pop_i;
-
-    S.incomings.template get<MomentId2D::mxx>() += pop_i * B.Hxx;
-    S.incomings.template get<MomentId2D::mxy>() += pop_i * B.Hxy;
-    S.incomings.template get<MomentId2D::myy>() += pop_i * B.Hyy;
-
-    S.mxx.template get<MomentId2D::rho>() += F.w * B.Hxx;
-    S.mxx.template get<MomentId2D::ux>() += F.Hx * B.Hxx;
-    S.mxx.template get<MomentId2D::uy>() += F.Hy * B.Hxx;
-    S.mxx.template get<MomentId2D::mxx>() += F.Hxx * B.Hxx;
-    S.mxx.template get<MomentId2D::mxy>() += F.Hxy * B.Hxx;
-    S.mxx.template get<MomentId2D::myy>() += F.Hyy * B.Hxx;
-
-    S.mxy.template get<MomentId2D::rho>() += F.w * B.Hxy;
-    S.mxy.template get<MomentId2D::ux>() += F.Hx * B.Hxy;
-    S.mxy.template get<MomentId2D::uy>() += F.Hy * B.Hxy;
-    S.mxy.template get<MomentId2D::mxx>() += F.Hxx * B.Hxy;
-    S.mxy.template get<MomentId2D::mxy>() += F.Hxy * B.Hxy;
-    S.mxy.template get<MomentId2D::myy>() += F.Hyy * B.Hxy;
-
-    S.myy.template get<MomentId2D::rho>() += F.w * B.Hyy;
-    S.myy.template get<MomentId2D::ux>() += F.Hx * B.Hyy;
-    S.myy.template get<MomentId2D::uy>() += F.Hy * B.Hyy;
-    S.myy.template get<MomentId2D::mxx>() += F.Hxx * B.Hyy;
-    S.myy.template get<MomentId2D::mxy>() += F.Hxy * B.Hyy;
-    S.myy.template get<MomentId2D::myy>() += F.Hyy * B.Hyy;
+    accumulate_incoming_moments(S.incomings, pop_i, B);
+    for_each_id<DirichletEquationList>(EqOp{S, B, F});
 }
 
 __device__ __forceinline__ void accumulate_outgoing_dirichlet(
-    DirichletSystem2D &S,
-    const Factors2D &F)
+    DirichletSystem &S,
+    const Factors &F)
 {
-    S.rho.lin.template get<MomentId2D::rho>() += F.w;
-    S.rho.lin.template get<MomentId2D::ux>() += F.Hx;
-    S.rho.lin.template get<MomentId2D::uy>() += F.Hy;
-
-    S.rho.lin.template get<MomentId2D::mxx>() += (r::one - Geometry::OMEGA) * F.Hxx;
-    S.rho.lin.template get<MomentId2D::mxy>() += (r::one - Geometry::OMEGA) * F.Hxy;
-    S.rho.lin.template get<MomentId2D::myy>() += (r::one - Geometry::OMEGA) * F.Hyy;
-
-    S.rho.nonlin.template get<NonlinearId2D::uxux>() += Geometry::OMEGA * F.Hxx;
-    S.rho.nonlin.template get<NonlinearId2D::uxuy>() += Geometry::OMEGA * F.Hxy;
-    S.rho.nonlin.template get<NonlinearId2D::uyuy>() += Geometry::OMEGA * F.Hyy;
+    accumulate_rho_linear_row(S.rho.lin, F);
+    accumulate_rho_nonlinear_row(S.rho.nonlin, F);
 }

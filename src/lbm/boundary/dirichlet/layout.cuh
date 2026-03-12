@@ -1,24 +1,45 @@
 #pragma once
 
-#include "../common/type_list.cuh"
+#include "../common/id_list.cuh"
 #include "../common/moment_ids.cuh"
 #include "../common/nonlinear_ids.cuh"
 
-using DirichletVarList2D = IdList<
-    MomentId2D::rho,
-    MomentId2D::ux,
-    MomentId2D::uy,
-    MomentId2D::mxx,
-    MomentId2D::mxy,
-    MomentId2D::myy>;
+using DirichletVarList = IdList<
+    MomentId::rho,
+    MomentId::ux,
+    MomentId::uy,
+    MomentId::mxx,
+    MomentId::mxy,
+    MomentId::myy>;
+// MomentId::mxxx,
+// MomentId::mxxy,
+// MomentId::mxyy,
+// MomentId::myyy>;
 
-using DirichletIncomingList2D = IdList<
-    MomentId2D::rho,
-    MomentId2D::mxx,
-    MomentId2D::mxy,
-    MomentId2D::myy>;
+using DirichletIncomingList = IdList<
+    MomentId::rho,
+    MomentId::mxx,
+    MomentId::mxy,
+    MomentId::myy>;
+// MomentId::mxxx,
+// MomentId::mxxy,
+// MomentId::mxyy,
+// MomentId::myyy>;
 
-using DirichletNonlinearList2D = IdList<
-    NonlinearId2D::uxux,
-    NonlinearId2D::uxuy,
-    NonlinearId2D::uyuy>;
+using DirichletEquationList = IdList<
+    MomentId::mxx,
+    MomentId::mxy,
+    MomentId::myy>;
+// MomentId::mxxx,
+// MomentId::mxxy,
+// MomentId::mxyy,
+// MomentId::myyy>;
+
+using DirichletNonlinearList = IdList<
+    NonlinearId::uxux,
+    NonlinearId::uxuy,
+    NonlinearId::uyuy>;
+// NonlinearId::uxuxux,
+// NonlinearId::uxuxuy,
+// NonlinearId::uxuyuy,
+// NonlinearId::uyuyuy > ;

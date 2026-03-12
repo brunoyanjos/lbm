@@ -4,10 +4,10 @@
 #include "../../stencil_active.cuh"
 #include "factors.cuh"
 
-__device__ __forceinline__ Factors2D
+__device__ __forceinline__ Factors
 make_factors(const Stencil::Basis &B, real_t w)
 {
-    Factors2D F{};
+    Factors F{};
 
     F.w = w;
     F.Hx = w * Stencil::as2 * B.cx;

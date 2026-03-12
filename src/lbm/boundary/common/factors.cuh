@@ -2,7 +2,7 @@
 #include "../../../core/types.cuh"
 #include "../../../core/lbm_features.cuh"
 
-struct Factors2D
+struct Factors
 {
     real_t w = r::zero;
 

@@ -1,6 +1,6 @@
 #pragma once
 
-enum class NonlinearId2D : int
+enum class NonlinearId : int
 {
     uxux = 0,
     uxuy,
@@ -10,10 +10,4 @@ enum class NonlinearId2D : int
     uxuxuy,
     uxuyuy,
     uyuyuy,
-
-    uxuxuxux,
-    uxuxuxuy,
-    uxuxuyuy,
-    uxuyuyuy,
-    uyuyuyuy
 };

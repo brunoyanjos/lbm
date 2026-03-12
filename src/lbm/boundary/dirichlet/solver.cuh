@@ -27,14 +27,14 @@ apply_boundary_dirichlet(
     const uint32_t outgoing_mask = valid_mask;
     const uint32_t incoming_mask = mask_opp(valid_mask);
 
-    DirichletSystem2D S{};
+    DirichletSystem S{};
 
 #pragma unroll
     for (int i = 0; i < Stencil::Q; ++i)
     {
         const auto B = Stencil::basis(i);
         const real_t w = Stencil::w(i);
-        const Factors2D F = make_factors(B, w);
+        const Factors F = make_factors(B, w);
 
         if (dir_valid(incoming_mask, i))
             accumulate_incoming_dirichlet(S, pop[i], B, F);
@@ -43,7 +43,7 @@ apply_boundary_dirichlet(
             accumulate_outgoing_dirichlet(S, F);
     }
 
-    S.normalize_known();
+    S.normalize_incomings();
 
     real_t Aflat[9]{};
     real_t b[3]{};

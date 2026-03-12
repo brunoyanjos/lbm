@@ -6,27 +6,27 @@
 #include "../common/equation_row.cuh"
 #include "layout.cuh"
 
-struct FluidSystem2D
+struct FluidSystem
 {
-    IncomingMoments<FluidIncomingList2D> incomings;
+    IncomingMoments<FluidIncomingList> incomings;
 
-    EquationRow<FluidVarList2D, FluidNonlinearList2D> rho;
+    EquationRow<FluidVarList, FluidNonlinearList> rho;
 
-    LinearRow<FluidVarList2D> ux;
-    LinearRow<FluidVarList2D> uy;
+    LinearRow<FluidVarList> ux;
+    LinearRow<FluidVarList> uy;
 
-    LinearRow<FluidVarList2D> mxx;
-    LinearRow<FluidVarList2D> mxy;
-    LinearRow<FluidVarList2D> myy;
+    LinearRow<FluidVarList> mxx;
+    LinearRow<FluidVarList> mxy;
+    LinearRow<FluidVarList> myy;
 
     __device__ __forceinline__ void normalize_known()
     {
-        const real_t inv_rho = r::one / incomings.template get<MomentId2D::rho>();
+        const real_t inv_rho = r::one / incomings.template get<MomentId::rho>();
 
-        incomings.template get<MomentId2D::ux>() *= inv_rho;
-        incomings.template get<MomentId2D::uy>() *= inv_rho;
-        incomings.template get<MomentId2D::mxx>() *= inv_rho;
-        incomings.template get<MomentId2D::mxy>() *= inv_rho;
-        incomings.template get<MomentId2D::myy>() *= inv_rho;
+        incomings.template get<MomentId::ux>() *= inv_rho;
+        incomings.template get<MomentId::uy>() *= inv_rho;
+        incomings.template get<MomentId::mxx>() *= inv_rho;
+        incomings.template get<MomentId::mxy>() *= inv_rho;
+        incomings.template get<MomentId::myy>() *= inv_rho;
     }
 };

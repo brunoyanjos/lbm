@@ -1,6 +1,6 @@
 #pragma once
 
-#include "type_list.cuh"
+#include "id_list.cuh"
 
 template <auto Query, class List>
 struct IndexOfId;

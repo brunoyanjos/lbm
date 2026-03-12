@@ -2,7 +2,7 @@
 
 #include "../../../core/types.cuh"
 
-struct FluidNewtonCoefficients2D
+struct FluidNewtonCoefficients
 {
     real_t A[5 * 8]{};
     real_t b[5]{};
