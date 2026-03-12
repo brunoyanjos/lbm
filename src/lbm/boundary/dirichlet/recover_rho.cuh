@@ -9,7 +9,7 @@ __device__ __forceinline__ real_t recover_dirichlet_rho(
     real_t mxx, real_t mxy, real_t myy)
 {
     const real_t denom =
-        S.rho.lin.template get<MomentId::rho>() +
+        S.rho.lin.get<MomentId::rho>() +
         ux * S.rho.lin.template get<MomentId::ux>() +
         uy * S.rho.lin.template get<MomentId::uy>() +
         mxx * S.rho.lin.template get<MomentId::mxx>() +

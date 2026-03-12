@@ -88,7 +88,7 @@ namespace app
                 const double ke = io::compute_ke_host_2d(state, tags.h_node);
 
                 io::tke_bin_append(ctx.out_dir, t, ke);
-                io::write_vtk(state, cfg, t, ctx.out_dir);
+                io::write_vti(state, cfg, t, ctx.out_dir);
             }
 
             if (ctx.show_progress && (ui.should_print() || t == t_end - 1))

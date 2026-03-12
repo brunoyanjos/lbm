@@ -89,7 +89,7 @@ __device__ __forceinline__ void solve_fluid_newton(
         build_fluid_jacobian(C, ux, uy, J);
         build_fluid_rhs(C, ux, uy, mxx, mxy, myy, rhs);
 
-        gaussianElimination<5>(J, rhs, delta);
+        // gaussianElimination<5>(J, rhs, delta);
 
         ux = ux_old + delta[0];
         uy = uy_old + delta[1];

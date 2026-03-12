@@ -45,16 +45,14 @@ apply_boundary_dirichlet(
 
     S.normalize_incomings();
 
-    real_t Aflat[9]{};
-    real_t b[3]{};
-    real_t m[3]{};
+    LinearSystem<DirichletEquationList::size> L{};
 
-    build_dirichlet_system(S, ux, uy, Aflat, b);
-    gaussianElimination<3>(Aflat, b, m);
+    build_dirichlet_system(S, ux, uy, L);
+    gaussianElimination(L);
 
-    mxx = m[0];
-    mxy = m[1];
-    myy = m[2];
+    mxx = L.x[0];
+    mxy = L.x[1];
+    myy = L.x[2];
 
     rho = recover_dirichlet_rho(S, ux, uy, mxx, mxy, myy);
 }
