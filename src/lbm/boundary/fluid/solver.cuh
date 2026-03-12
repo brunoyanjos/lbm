@@ -2,12 +2,19 @@
 
 #include "../../../core/types.cuh"
 #include "../../../core/linear_solver.cuh"
-#include "../../domain/mask_utils.cuh"
 #include "../../../geometries/active_geometry.cuh"
+#include "../../domain/mask_utils.cuh"
+#include "../../stencil_active.cuh"
 
-#include "system_variables.cuh"
-#include "helpers.cuh"
-#include "non_linear_system.cuh"
+#include "../common/factors.cuh"
+#include "../common/make_factors.cuh"
+
+#include "system.cuh"
+#include "accumulate.cuh"
+#include "newton_coefficients.cuh"
+#include "build_newton_system.cuh"
+#include "solve_newton.cuh"
+#include "recover_rho.cuh"
 
 #include <cstdint>
 
@@ -26,32 +33,18 @@ __device__ inline void evaluate_fluid_node(
 #pragma unroll
     for (int i = 0; i < Stencil::Q; ++i)
     {
-        real_t cx, cy, Hxx, Hxy, Hyy;
-        Stencil::basis2(i, cx, cy, Hxx, Hxy, Hyy);
-
+        const auto B = Stencil::basis(i);
         const real_t w = Stencil::w(i);
-        const real_t Hx_factor = w * Stencil::as2 * cx;
-        const real_t Hy_factor = w * Stencil::as2 * cy;
-        const real_t Hxx_factor = w * Stencil::as4 * real_t(0.5) * Hxx;
-        const real_t Hxy_factor = w * Stencil::as4 * Hxy;
-        const real_t Hyy_factor = w * Stencil::as4 * real_t(0.5) * Hyy;
+        const Factors2D F = make_factors(B, w);
 
         if (dir_valid(incoming_mask, i))
-            accumulate_incoming_fluid(
-                S, pop[i],
-                w, Hx_factor, Hy_factor,
-                Hxx_factor, Hxy_factor, Hyy_factor,
-                cx, cy,
-                Hxx, Hxy, Hyy);
+            accumulate_incoming_fluid(S, pop[i], B, F);
 
         if (dir_valid(outgoing_mask, i))
-            accumulate_outgoing_fluid(
-                S,
-                w, Hx_factor, Hy_factor,
-                Hxx_factor, Hxy_factor, Hyy_factor);
+            accumulate_outgoing_fluid(S, F);
     }
 
-    S.normalize_incoming();
+    S.normalize_known();
 
     FluidNewtonCoefficients2D C{};
     build_fluid_newton_coefficients(S, C);

@@ -14,7 +14,7 @@ __device__ __forceinline__ void store_next_state(const LBMState &S,
     S.d_rho[n][idx] = rho - Geometry::RHO_0;
     S.d_ux[n][idx] = ux;
     S.d_uy[n][idx] = uy;
-    S.d_mxx[n][idx] = mxx;
-    S.d_mxy[n][idx] = mxy;
-    S.d_myy[n][idx] = myy;
+    S.d2.mxx[n][idx] = mxx;
+    S.d2.mxy[n][idx] = mxy;
+    S.d2.myy[n][idx] = myy;
 }

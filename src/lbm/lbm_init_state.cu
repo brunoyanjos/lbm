@@ -56,12 +56,12 @@ __global__ void init_on_device(LBMState S)
 
 #if LBM_HAS_REG3_CROSS
         mxxy += pop[i] * B.Hxxy;
-        mxyy += pop[i] * B.Hx;
+        mxyy += pop[i] * B.Hxyy;
 #endif
 
 #if LBM_HAS_REG3_AXIAL
-        mxxx += pop[i] * Hxxx;
-        myyy += pop[i] * Hyyy;
+        mxxx += pop[i] * B.Hxxx;
+        myyy += pop[i] * B.Hyyy;
 #endif
     }
 

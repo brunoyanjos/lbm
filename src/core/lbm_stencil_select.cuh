@@ -1,0 +1,18 @@
+#pragma once
+
+#if defined(LBM_STENCIL_D2Q9)
+
+#define LBM_ACTIVE_STENCIL_D2Q9 1
+#define LBM_ACTIVE_STENCIL_D2V17 0
+
+#elif defined(LBM_STENCIL_D2V17)
+
+#define LBM_ACTIVE_STENCIL_D2Q9 0
+#define LBM_ACTIVE_STENCIL_D2V17 1
+
+#else
+// fallback para editor / default local
+#define LBM_ACTIVE_STENCIL_D2Q9 1
+#define LBM_ACTIVE_STENCIL_D2V17 0
+
+#endif

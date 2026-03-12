@@ -1,7 +1,7 @@
 #pragma once
 
 #include "lbm_features.cuh"
-#include "../lbm/stencil_active.cuh"
+#include "lbm_stencil_select.cuh"
 
 namespace lbm
 {
