@@ -52,7 +52,7 @@ namespace io
             for (int x = 0; x < nx; ++x)
             {
                 const size_t idx = idxGlobal(x, y);
-                const real_t rho = S.h_rho[idx] + Geometry::RHO_0;
+                const real_t rho = host_field<MomentId::rho>(S)[idx] + Geometry::RHO_0;
                 file << "          " << static_cast<float>(rho) << "\n";
             }
         }
@@ -65,7 +65,7 @@ namespace io
             for (int x = 0; x < nx; ++x)
             {
                 const size_t idx = idxGlobal(x, y);
-                const real_t ux = S.h_ux[idx] / Stencil::as2;
+                const real_t ux = host_field<MomentId::ux>(S)[idx] / Stencil::as2;
                 file << "          " << static_cast<float>(ux) << "\n";
             }
         }
@@ -78,7 +78,7 @@ namespace io
             for (int x = 0; x < nx; ++x)
             {
                 const size_t idx = idxGlobal(x, y);
-                const real_t uy = S.h_uy[idx] / Stencil::as2;
+                const real_t uy = host_field<MomentId::uy>(S)[idx] / Stencil::as2;
                 file << "          " << static_cast<float>(uy) << "\n";
             }
         }
@@ -91,8 +91,8 @@ namespace io
             for (int x = 0; x < nx; ++x)
             {
                 const size_t idx = idxGlobal(x, y);
-                const real_t ux = S.h_ux[idx] / Stencil::as2;
-                const real_t uy = S.h_uy[idx] / Stencil::as2;
+                const real_t ux = host_field<MomentId::ux>(S)[idx] / Stencil::as2;
+                const real_t uy = host_field<MomentId::uy>(S)[idx] / Stencil::as2;
 
                 file << "          "
                      << static_cast<float>(ux) << " "

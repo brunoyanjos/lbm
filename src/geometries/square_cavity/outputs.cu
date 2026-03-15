@@ -14,7 +14,7 @@ namespace SQUARE_CAVITY
         return out_dir + "/outputs/centerline.bin";
     }
 
-    static void write_centerline_profiles(const LBMState &state, int t, const std::string &out_dir)
+    static void write_centerline_profiles(const LBMState &S, int t, const std::string &out_dir)
     {
         const int xc = NX / 2;
         const int yc = NY / 2;
@@ -27,7 +27,7 @@ namespace SQUARE_CAVITY
             const int idx = xc + NX * y;
             const int idx_n = (xc - 1) + NX * y;
 
-            ux_xc_y[y] = (state.h_ux[idx] / Stencil::as2 + state.h_ux[idx_n] / Stencil::as2) * real_t(0.5);
+            ux_xc_y[y] = (host_field<MomentId::ux>(S)[idx] / Stencil::as2 + host_field<MomentId::ux>(S)[idx_n] / Stencil::as2) * real_t(0.5);
         }
 
         for (int x = 0; x < NX; ++x)
@@ -35,7 +35,7 @@ namespace SQUARE_CAVITY
             const int idx = x + NX * yc;
             const int idx_n = x + NX * (yc - 1);
 
-            uy_yc_x[x] = (state.h_uy[idx] / Stencil::as2 + state.h_uy[idx_n] / Stencil::as2) * real_t(0.5);
+            uy_yc_x[x] = (host_field<MomentId::uy>(S)[idx] / Stencil::as2 + host_field<MomentId::uy>(S)[idx_n] / Stencil::as2) * real_t(0.5);
         }
 
         const std::string path = centerline_path(out_dir);

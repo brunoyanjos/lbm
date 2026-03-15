@@ -1,40 +1,25 @@
 #pragma once
 
 #include "../../core/types.cuh"
-#include "../../core/lbm_config.cuh"
 
-namespace D2V17
+struct D2V17
 {
-    constexpr int Q = 17;
+    static constexpr int Q = 17;
 
-    constexpr real_t W0 = static_cast<real_t>(0.40200514690911262594166439245907543027);
-    constexpr real_t W1 = static_cast<real_t>(0.11615486649778154387403545662591119451);
-    constexpr real_t W2 = static_cast<real_t>(0.03300635362298691394975382591472168169);
-    constexpr real_t W3 = static_cast<real_t>(0.00007907860216591813123713324054816357);
-    constexpr real_t W4 = static_cast<real_t>(0.00025841454978746755955748610405009882);
+    static constexpr real_t W0 = static_cast<real_t>(0.40200514690911262594166439245907543027);
+    static constexpr real_t W1 = static_cast<real_t>(0.11615486649778154387403545662591119451);
+    static constexpr real_t W2 = static_cast<real_t>(0.03300635362298691394975382591472168169);
+    static constexpr real_t W3 = static_cast<real_t>(0.00007907860216591813123713324054816357);
+    static constexpr real_t W4 = static_cast<real_t>(0.00025841454978746755955748610405009882);
 
-    constexpr real_t as = static_cast<real_t>(1.64343060879795414682265416738949126364);
-    constexpr real_t as2 = as * as;
-    constexpr real_t as4 = as2 * as2;
-    constexpr real_t as6 = as4 * as2;
+    static constexpr real_t as = static_cast<real_t>(1.64343060879795414682265416738949126364);
+    static constexpr real_t as2 = as * as;
+    static constexpr real_t as4 = as2 * as2;
+    static constexpr real_t as6 = as4 * as2;
 
-    constexpr real_t cs2 = static_cast<real_t>(1.0) / as2;
+    static constexpr real_t cs2 = static_cast<real_t>(1.0) / as2;
 
-    struct Basis
-    {
-        real_t cx, cy;
-        real_t Hxx, Hxy, Hyy;
-
-#if LBM_HAS_REG3_CROSS
-        real_t Hxxy, Hxyy;
-#endif
-
-#if LBM_HAS_REG3_AXIAL
-        real_t Hxxx, Hyyy;
-#endif
-    };
-
-    __host__ __device__ __forceinline__ int cx(int i)
+    __host__ __device__ static int cx(int i)
     {
         switch (i)
         {
@@ -75,7 +60,7 @@ namespace D2V17
         }
     }
 
-    __host__ __device__ __forceinline__ int cy(int i)
+    __host__ __device__ static int cy(int i)
     {
         switch (i)
         {
@@ -116,7 +101,7 @@ namespace D2V17
         }
     }
 
-    __host__ __device__ __forceinline__ real_t w(int i)
+    __host__ __device__ static real_t w(int i)
     {
         // agrupar pesos iguais ajuda o compilador
         switch (i)
@@ -143,31 +128,7 @@ namespace D2V17
         }
     }
 
-    __host__ __device__ __forceinline__ Basis basis(int i)
-    {
-        Basis b{};
-
-        b.cx = r_cast(D2V17::cx(i));
-        b.cy = r_cast(D2V17::cy(i));
-
-        b.Hxx = b.cx * b.cx - D2V17::cs2;
-        b.Hxy = b.cx * b.cy;
-        b.Hyy = b.cy * b.cy - D2V17::cs2;
-
-#if LBM_HAS_REG3_CROSS
-        b.Hxxy = b.Hxx * b.cy;
-        b.Hxyy = b.cx * b.Hyy;
-#endif
-
-#if LBM_HAS_REG3_AXIAL
-        b.Hxxx = b.cx * b.cx * b.cx - r::three * D2V17::cs2 * b.cx;
-        b.Hyyy = b.cy * b.cy * b.cy - r::three * D2V17::cs2 * b.cy;
-#endif
-
-        return b;
-    }
-
-    __host__ __device__ __forceinline__ int opp(int i)
+    __host__ __device__ static int opp(int i)
     {
         switch (i)
         {
@@ -208,7 +169,7 @@ namespace D2V17
         case 15:
             return 13;
         default:
-            return 14; // i==16
+            return 14;
         }
     }
-} // namespace D2V17
+};

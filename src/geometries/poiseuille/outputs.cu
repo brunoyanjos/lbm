@@ -14,7 +14,7 @@ namespace POISEUILLE
         return out_dir + "/outputs/channel_profile.bin";
     }
 
-    static void write_channel_profile(const LBMState &state, int t, const std::string &out_dir, const DomainTags &tags)
+    static void write_channel_profile(const LBMState &S, int t, const std::string &out_dir, const DomainTags &tags)
     {
         // seção “desenvolvida”
         const int x_sample = NX / 2;
@@ -33,7 +33,7 @@ namespace POISEUILLE
                 continue;
             }
 
-            const real_t ux = (state.h_ux[idx] / Stencil::as2 + state.h_ux[idx_n] / Stencil::as2) * real_t(0.5);
+            const real_t ux = (host_field<MomentId::ux>(S)[idx] / Stencil::as2 + host_field<MomentId::ux>(S)[idx_n] / Stencil::as2) * real_t(0.5);
             ux_y[y] = (float)ux;
         }
 

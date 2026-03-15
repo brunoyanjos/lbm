@@ -19,7 +19,7 @@ namespace ANNUL
         return out_dir + "/outputs/annul_profile.bin";
     }
 
-    static void write_annul_pressure(const LBMState &state, int t, const std::string &out_dir, const DomainTags &tags)
+    static void write_annul_pressure(const LBMState &S, int t, const std::string &out_dir, const DomainTags &tags)
     {
         const real_t xc = r_cast(NX - 1) * r::half;
         const real_t yc = r_cast(NY - 1) * r::half;
@@ -46,7 +46,7 @@ namespace ANNUL
             if (tags.h_node[idx_n] == to_u8(NodeId::SOLID))
                 continue;
 
-            const real_t rho_p = (state.h_rho[idx] + state.h_rho[idx_n]) * r::half;
+            const real_t rho_p = (host_field<MomentId::rho>(S)[idx] + host_field<MomentId::rho>(S)[idx_n]) * r::half;
 
             const real_t dx = r_cast(x) - xc;
             const real_t y_mid = (r_cast(y_line) + r_cast(y_line - 1)) * r::half;
@@ -90,7 +90,7 @@ namespace ANNUL
         utheta = -ux * s + uy * c;
     }
 
-    static void write_annul_profile(const LBMState &state, int t, const std::string &out_dir, const DomainTags &tags)
+    static void write_annul_profile(const LBMState &S, int t, const std::string &out_dir, const DomainTags &tags)
     {
         const real_t xc = r_cast(NX - 1) * r::half;
         const real_t yc = r_cast(NY - 1) * r::half;
@@ -121,8 +121,8 @@ namespace ANNUL
             if (tags.h_node[idx_n] == to_u8(NodeId::SOLID))
                 continue;
 
-            const real_t ux = (state.h_ux[idx] / Stencil::as2 + state.h_ux[idx_n] / Stencil::as2) * r::half;
-            const real_t uy = (state.h_uy[idx] / Stencil::as2 + state.h_uy[idx_n] / Stencil::as2) * r::half;
+            const real_t ux = (host_field<MomentId::ux>(S)[idx] / Stencil::as2 + host_field<MomentId::ux>(S)[idx_n] / Stencil::as2) * r::half;
+            const real_t uy = (host_field<MomentId::uy>(S)[idx] / Stencil::as2 + host_field<MomentId::uy>(S)[idx_n] / Stencil::as2) * r::half;
 
             const real_t dx = r_cast(x) - xc;
             const real_t y_mid = (r_cast(y_line) + r_cast(y_line - 1)) * r::half;

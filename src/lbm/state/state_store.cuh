@@ -1,20 +1,42 @@
 #pragma once
 
 #include "../../core/types.cuh"
-#include "lbm_state.cuh"
 #include "../../geometries/active_geometry.cuh"
 
-__device__ __forceinline__ void store_next_state(const LBMState &S,
+#include "../meta/id_list.cuh"
+#include "../moment/moment_id.cuh"
+#include "../moment/moment_values.cuh"
+#include "../state/lbm_state.cuh"
+
+template <class MomentList>
+struct NextStateStorer
+{
+    LBMState &S;
+    int n;
+    size_t idx;
+    const MomentValues<MomentList> &M;
+
+    template <auto Id>
+    __device__ __forceinline__ void operator()()
+    {
+        if constexpr (Id == MomentId::rho)
+        {
+            device_field<Id>(S)[n][idx] =
+                M.template get<Id>() - Geometry::RHO_0;
+        }
+        else
+        {
+            device_field<Id>(S)[n][idx] =
+                M.template get<Id>();
+        }
+    }
+};
+
+template <class MomentList>
+__device__ __forceinline__ void store_next_state(LBMState &S,
                                                  int n,
                                                  size_t idx,
-                                                 real_t rho,
-                                                 real_t ux, real_t uy,
-                                                 real_t mxx, real_t mxy, real_t myy)
+                                                 const MomentValues<MomentList> &M)
 {
-    S.d_rho[n][idx] = rho - Geometry::RHO_0;
-    S.d_ux[n][idx] = ux;
-    S.d_uy[n][idx] = uy;
-    S.d2.mxx[n][idx] = mxx;
-    S.d2.mxy[n][idx] = mxy;
-    S.d2.myy[n][idx] = myy;
+    for_each_id<MomentList>(NextStateStorer<MomentList>{S, n, idx, M});
 }

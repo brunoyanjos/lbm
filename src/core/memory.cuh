@@ -2,6 +2,10 @@
 #include <cuda_runtime.h>
 #include <cstddef>
 
+#include <cstdlib>
+#include <cstring>
+#include <new>
+
 template <typename T>
 __host__ inline void cudaMalloc2_safe(T *(&p)[2], size_t bytes)
 {
@@ -63,6 +67,7 @@ __host__ inline void hostMalloc_safe(T *&p, size_t bytes)
     p = static_cast<T *>(std::malloc(bytes));
     if (!p)
         throw std::bad_alloc();
+    std::memset(p, 0, bytes);
 }
 
 template <typename T>

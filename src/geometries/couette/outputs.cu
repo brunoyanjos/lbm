@@ -14,7 +14,7 @@ namespace COUETTE
         return out_dir + "/outputs/couette_profile.bin";
     }
 
-    static void write_couette_profile(const LBMState &state, int t, const std::string &out_dir, const DomainTags &tags)
+    static void write_couette_profile(const LBMState &S, int t, const std::string &out_dir, const DomainTags &tags)
     {
         (void)tags;
 
@@ -27,7 +27,7 @@ namespace COUETTE
             const int idx = x_sample + NX * y;
             const int idx_n = (x_sample - 1) + NX * y;
 
-            const real_t ux = (state.h_ux[idx] / Stencil::as2 + state.h_ux[idx_n] / Stencil::as2) * real_t(0.5);
+            const real_t ux = (host_field<MomentId::ux>(S)[idx] / Stencil::as2 + host_field<MomentId::ux>(S)[idx_n] / Stencil::as2) * real_t(0.5);
             ux_y[y] = (float)ux;
         }
 

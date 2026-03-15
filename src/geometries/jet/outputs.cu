@@ -19,7 +19,7 @@ namespace JET
         return out_dir + "/outputs/jet_centerline.bin";
     }
 
-    static void write_jet_sections(const LBMState &state, int t, const std::string &out_dir, const DomainTags &tags)
+    static void write_jet_sections(const LBMState &S, int t, const std::string &out_dir, const DomainTags &tags)
     {
         (void)tags;
 
@@ -39,7 +39,7 @@ namespace JET
                 const int idx_n = (xs - 1) + NX * y;
                 const int idx_n_safe = (xs == 0) ? idx : idx_n;
 
-                const real_t ux = (state.h_ux[idx] / Stencil::as2 + state.h_ux[idx_n_safe] / Stencil::as2) * real_t(0.5);
+                const real_t ux = (host_field<MomentId::ux>(S)[idx] / Stencil::as2 + host_field<MomentId::ux>(S)[idx_n_safe] / Stencil::as2) * real_t(0.5);
                 ux_all[(size_t)k * (size_t)NY + (size_t)y] = (float)ux;
             }
         }
@@ -69,7 +69,7 @@ namespace JET
         f.write(reinterpret_cast<const char *>(ux_all.data()), sizeof(float) * ux_all.size());
     }
 
-    static void write_jet_centerline(const LBMState &state, int t, const std::string &out_dir, const DomainTags &tags)
+    static void write_jet_centerline(const LBMState &S, int t, const std::string &out_dir, const DomainTags &tags)
     {
         (void)tags;
 
@@ -88,7 +88,7 @@ namespace JET
             const int idx_n = (x - 1) + NX * y_line;
             const int idx_n_safe = (x == 0) ? idx : idx_n;
 
-            const real_t ux = (state.h_ux[idx] / Stencil::as2 + state.h_ux[idx_n_safe] / Stencil::as2) * real_t(0.5);
+            const real_t ux = (host_field<MomentId::ux>(S)[idx] / Stencil::as2 + host_field<MomentId::ux>(S)[idx_n_safe] / Stencil::as2) * real_t(0.5);
             ux_x[x] = (float)ux;
         }
 

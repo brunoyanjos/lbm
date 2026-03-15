@@ -5,7 +5,6 @@
 
 #include "../io/output_meta.cuh"
 #include "../io/output_vtk.cuh"
-#include "../io/output_tags_vtk.cuh"
 #include "../io/output_tke_bin.cuh"
 #include "../io/debug_domain.cuh"
 
@@ -40,7 +39,6 @@ namespace app
             if (ctx.show_progress)
                 progress::ProgressUI::suspend_for_log();
             io::debug_domain(tags, true, true, 2048);
-            io::write_tags_vtk(tags, ctx.out_dir);
         }
 
         // ---------------- warmup ----------------
