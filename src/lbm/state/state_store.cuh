@@ -7,14 +7,12 @@
 __device__ __forceinline__ void store_next_state(const LBMState &S,
                                                  int n,
                                                  size_t idx,
-                                                 real_t rho,
-                                                 real_t ux, real_t uy,
-                                                 real_t mxx, real_t mxy, real_t myy)
+                                                 const NodeMoments &M)
 {
-    S.d_rho[n][idx] = rho - RHO_0;
-    S.d_ux[n][idx] = ux;
-    S.d_uy[n][idx] = uy;
-    S.d_mxx[n][idx] = mxx;
-    S.d_mxy[n][idx] = mxy;
-    S.d_myy[n][idx] = myy;
+    S.d_rho[n][idx] = M.rho - RHO_0;
+    S.d_ux[n][idx] = M.ux;
+    S.d_uy[n][idx] = M.uy;
+    S.d_mxx[n][idx] = M.mxx;
+    S.d_mxy[n][idx] = M.mxy;
+    S.d_myy[n][idx] = M.myy;
 }

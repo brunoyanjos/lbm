@@ -17,8 +17,8 @@ __global__ void init_on_device(LBMState S)
         return;
 
     const real_t rho = RHO_0;
-    const real_t ux = real_t(0);
-    const real_t uy = real_t(0);
+    const real_t ux = r::zero;
+    const real_t uy = r::zero;
 
     real_t pop[Stencil::Q];
     equilibrium(pop, rho, ux, uy);
@@ -31,9 +31,9 @@ __global__ void init_on_device(LBMState S)
 
     const real_t inv_rho = real_t(1) / rho;
 
-    real_t mxx = real_t(0);
-    real_t mxy = real_t(0);
-    real_t myy = real_t(0);
+    real_t mxx = r::zero;
+    real_t mxy = r::zero;
+    real_t myy = r::zero;
 
 #pragma unroll
     for (int i = 0; i < Stencil::Q; ++i)
@@ -50,9 +50,9 @@ __global__ void init_on_device(LBMState S)
         myy += pop[i] * Hyy;
     }
 
-    S.d_mxx[c][idx] = mxx * inv_rho * (Stencil::as4 * real_t(0.5));
+    S.d_mxx[c][idx] = mxx * inv_rho * (Stencil::as4 * r::half);
     S.d_mxy[c][idx] = mxy * inv_rho * Stencil::as4;
-    S.d_myy[c][idx] = myy * inv_rho * (Stencil::as4 * real_t(0.5));
+    S.d_myy[c][idx] = myy * inv_rho * (Stencil::as4 * r::half);
 }
 
 void init_state(LBMState &S, const CudaConfig &cfg)

@@ -5,15 +5,14 @@
 
 #include "../io/output_meta.cuh"
 #include "../io/output_vtk.cuh"
-#include "../io/output_tags_vtk.cuh"
+#include "../io/debug_domain.cuh"
 #include "../io/output_tke_bin.cuh"
 #include "../io/output_centerline_bin.cuh"
 
 #include "../lbm/state/lbm_state.cuh"
 #include "../lbm/lbm_init_state.cuh"
 #include "../lbm/lbm_mom_step.cuh"
-#include "../lbm/domain/cavity_square_tags.cuh"
-#include "../lbm/domain/tags_debug.cuh"
+#include "../lbm/domain/build_tags.cuh"
 
 #include "../core/cuda_utils.cuh"
 #include "../core/simulation_config.h"
@@ -29,17 +28,14 @@ namespace app
         auto state = lbm_allocate_state();
         init_state(state, cfg);
 
-        DomainTags tags = domain_tags_allocate(ctx.verbose);
-        build_cavity_square_tags(tags);
+        DomainTags tags = domain_tags_allocate();
+        build_tags(tags);
 
         if (ctx.verbose)
         {
-            validate_cavity_square_tags_host(tags, true);
-
-            // evita misturar com a barra (stderr)
             if (ctx.show_progress)
                 progress::ProgressUI::suspend_for_log();
-            io::write_tags_vtk(tags, ctx.out_dir);
+            io::debug_domain(tags);
         }
 
         // ---------------- warmup ----------------
@@ -88,7 +84,7 @@ namespace app
                 const double ke = io::compute_ke_host_2d(state);
 
                 io::tke_bin_append(ctx.out_dir, t, ke);
-                io::write_vtk(state, cfg, t, ctx.out_dir);
+                io::write_vti(state, cfg, t, ctx.out_dir);
             }
 
             // barra (limite de frequência dentro do ProgressUI)
@@ -96,7 +92,6 @@ namespace app
             {
                 const auto now = clock::now();
 
-                // mede GPU parcial desde ev_prog0
                 CUDA_CHECK(cudaEventRecord(ev_prog1));
                 CUDA_CHECK(cudaEventSynchronize(ev_prog1));
 

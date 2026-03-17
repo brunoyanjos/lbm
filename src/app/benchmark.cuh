@@ -7,8 +7,8 @@ namespace app
 
     struct BenchmarkResult
     {
-        double gpu_seconds = 0.0;  // tempo medido por cudaEvent (kernel+device work enfileirado)
-        double wall_seconds = 0.0; // tempo real (inclui host/IO se habilitado)
+        double gpu_seconds = 0.0;
+        double wall_seconds = 0.0;
         double mlups_gpu = 0.0;
         double mlups_wall = 0.0;
         int measured_steps = 0;

@@ -1,4 +1,4 @@
-#include "cavity_square_tags.cuh"
+#include "build_tags.cuh"
 
 #include "../../core/geometry.h"
 #include "../../core/indexing.cuh"
@@ -8,30 +8,27 @@
 #include <cstdlib>
 #include <new>
 
-DomainTags domain_tags_allocate(bool host_buffers)
+DomainTags domain_tags_allocate()
 {
     DomainTags T{};
     T.N = static_cast<size_t>(NX) * static_cast<size_t>(NY);
     T.bytes_valid = T.N * sizeof(uint32_t);
-    T.bytes_wall = T.N * sizeof(uint8_t);
+    T.bytes_node = T.N * sizeof(uint8_t);
 
-    if (host_buffers)
+    T.h_valid = static_cast<uint32_t *>(std::malloc(T.bytes_valid));
+    T.h_node = static_cast<uint8_t *>(std::malloc(T.bytes_node));
+    if (!T.h_valid || !T.h_node)
     {
-        T.h_valid = static_cast<uint32_t *>(std::malloc(T.bytes_valid));
-        T.h_wall = static_cast<uint8_t *>(std::malloc(T.bytes_wall));
-        if (!T.h_valid || !T.h_wall)
-        {
-            std::free(T.h_valid);
-            std::free(T.h_wall);
-            throw std::bad_alloc();
-        }
+        std::free(T.h_valid);
+        std::free(T.h_node);
+        throw std::bad_alloc();
     }
 
     CUDA_CHECK(cudaMalloc(&T.d_valid, T.bytes_valid));
-    CUDA_CHECK(cudaMalloc(&T.d_wall, T.bytes_wall));
+    CUDA_CHECK(cudaMalloc(&T.d_node, T.bytes_node));
 
     CUDA_CHECK(cudaMemset(T.d_valid, 0, T.bytes_valid));
-    CUDA_CHECK(cudaMemset(T.d_wall, 0, T.bytes_wall));
+    CUDA_CHECK(cudaMemset(T.d_node, 0, T.bytes_node));
 
     return T;
 }
@@ -39,31 +36,30 @@ DomainTags domain_tags_allocate(bool host_buffers)
 void domain_tags_free(DomainTags &T)
 {
     std::free(T.h_valid);
-    std::free(T.h_wall);
+    std::free(T.h_node);
     T.h_valid = nullptr;
-    T.h_wall = nullptr;
+    T.h_node = nullptr;
 
     if (T.d_valid)
         CUDA_CHECK(cudaFree(T.d_valid));
-    if (T.d_wall)
-        CUDA_CHECK(cudaFree(T.d_wall));
+    if (T.d_node)
+        CUDA_CHECK(cudaFree(T.d_node));
     T.d_valid = nullptr;
-    T.d_wall = nullptr;
+    T.d_node = nullptr;
 
     T.N = 0;
     T.bytes_valid = 0;
-    T.bytes_wall = 0;
+    T.bytes_node = 0;
 }
 
 __global__ void cavity_square_tags_kernel(uint32_t *__restrict__ valid,
-                                          uint8_t *__restrict__ wall)
+                                          uint8_t *__restrict__ node)
 {
     int x, y;
     const size_t idx = idxThreadGlobal2D(x, y);
     if (idx == INVALID_INDEX)
         return;
 
-    // wall-id (para Dirichlet: TOP tem tampa móvel; demais u=0)
     const bool on_left = (x == 0);
     const bool on_right = (x == NX - 1);
     const bool on_bottom = (y == 0);
@@ -71,24 +67,15 @@ __global__ void cavity_square_tags_kernel(uint32_t *__restrict__ valid,
 
     const int bc_count = int(on_left) + int(on_right) + int(on_bottom) + int(on_top);
 
-    uint8_t wid = static_cast<uint8_t>(WallId::NONE);
+    uint8_t wid = to_u8(NodeId::FLUID);
 
-    if (bc_count >= 2)
-        wid = static_cast<uint8_t>(WallId::CORNER);
-    else if (on_left)
-        wid = static_cast<uint8_t>(WallId::LEFT);
-    else if (on_right)
-        wid = static_cast<uint8_t>(WallId::RIGHT);
-    else if (on_bottom)
-        wid = static_cast<uint8_t>(WallId::BOTTOM);
-    else if (on_top)
-        wid = static_cast<uint8_t>(WallId::TOP);
+    if (bc_count > 0)
+        wid = to_u8(NodeId::DIRICHLET);
 
-    wall[idx] = wid;
+    node[idx] = wid;
 
-    // valid directions: vizinho dentro do domínio
     uint32_t m = 0u;
-    m |= (1u << 0); // rest sempre válido
+    m |= (1u << 0);
 
 #pragma unroll
     for (int i = 1; i < Stencil::Q; ++i)
@@ -105,18 +92,18 @@ __global__ void cavity_square_tags_kernel(uint32_t *__restrict__ valid,
     valid[idx] = m;
 }
 
-void build_cavity_square_tags(DomainTags &T)
+void build_tags(DomainTags &T)
 {
     dim3 block(16, 16, 1);
     dim3 grid((NX + block.x - 1) / block.x,
               (NY + block.y - 1) / block.y, 1);
 
-    cavity_square_tags_kernel<<<grid, block>>>(T.d_valid, T.d_wall);
+    cavity_square_tags_kernel<<<grid, block>>>(T.d_valid, T.d_node);
     CUDA_CHECK(cudaGetLastError());
 
-    if (T.h_valid && T.h_wall)
+    if (T.h_valid && T.h_node)
     {
         CUDA_CHECK(cudaMemcpy(T.h_valid, T.d_valid, T.bytes_valid, cudaMemcpyDeviceToHost));
-        CUDA_CHECK(cudaMemcpy(T.h_wall, T.d_wall, T.bytes_wall, cudaMemcpyDeviceToHost));
+        CUDA_CHECK(cudaMemcpy(T.h_node, T.d_node, T.bytes_node, cudaMemcpyDeviceToHost));
     }
 }

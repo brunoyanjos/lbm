@@ -6,8 +6,8 @@ namespace app
 
     struct RunContext
     {
-        std::string out_dir;   // runs/<id>
-        bool enable_io = true; // desliga VTK/upload para benchmark
+        std::string out_dir;
+        bool enable_io = true;
         int warmup_steps = 100;
         bool verbose = false;
 

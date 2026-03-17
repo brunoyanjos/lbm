@@ -1,17 +1,20 @@
-#include "lbm_mom_step.cuh"
-#include "stencil_active.cuh"
-#include "boundary/regularized_boundary_condition.cuh"
-#include "boundary/fluid_moment_evaluation.cuh"
-#include "collision/collision.cuh"
-#include "moment_evaluation/moment_evaluation.cuh"
-#include "moment_evaluation/moment_scaling.cuh"
-#include "state/state_store.cuh"
-#include "population/pop_reconstruction.cuh"
+#include "core/geometry.h"
+#include "core/physics.h"
+#include "core/indexing.cuh"
+#include "core/cuda_utils.cuh"
 
-#include "../core/geometry.h"
-#include "../core/physics.h"
-#include "../core/indexing.cuh"
-#include "../core/cuda_utils.cuh"
+#include "lbm/lbm_mom_step.cuh"
+#include "lbm/stencil_active.cuh"
+#include "lbm/boundary/dirichlet/solver.cuh"
+#include "lbm/boundary/fluid/solver.cuh"
+#include "lbm/boundary/bc_velocity.cuh"
+#include "lbm/collision/collision.cuh"
+#include "lbm/moment/moment_evaluation.cuh"
+#include "lbm/moment/moment_scaling.cuh"
+#include "lbm/moment/node_moments.cuh"
+#include "lbm/moment/scale_factor.cuh"
+#include "lbm/state/state_store.cuh"
+#include "lbm/population/pop_reconstruction.cuh"
 
 __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
 {
@@ -23,53 +26,48 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
     const int c = S.cur;
     const int n = S.cur ^ 1;
 
-    const uint8_t wall_id = T.d_wall[idx];
+    const uint8_t node_id = T.d_node[idx];
     const uint32_t valid_ms = T.d_valid[idx];
 
     real_t pop[Stencil::Q];
 
-    // 1) reconstruct streamed populations from neighbor moments
     reconstruct_streamed_pop(pop, S, c, x, y);
 
-    real_t rho, ux, uy, mxx, mxy, myy;
+    NodeMoments M{};
 
-    if (wall_id != static_cast<uint8_t>(WallId::NONE))
+    if (node_id != to_u8(NodeId::FLUID))
     {
-        ux = real_t(0);
-        uy = real_t(0);
+        bc_velocity(M, x, y);
 
-        if (wall_id == static_cast<uint8_t>(WallId::TOP))
-            ux = U_LID;
-
-        apply_boundary(pop, valid_ms, rho, ux, uy, mxx, mxy, myy);
+        apply_boundary(pop, valid_ms, M);
     }
     else
     {
         if (is_full_mask(valid_ms))
         {
-            evaluate_moments_from_pop(pop, rho, ux, uy, mxx, mxy, myy);
+            evaluate_moments_from_pop(pop, M);
         }
         else
         {
-            rho = S.d_rho[c][idxGlobal(x, y)] + RHO_0;
-            ux = S.d_ux[c][idxGlobal(x, y)] / Stencil::as2;
-            uy = S.d_uy[c][idxGlobal(x, y)] / Stencil::as2;
-            mxx = S.d_mxx[c][idxGlobal(x, y)] / (Stencil::as4 * real_t(0.5));
-            mxy = S.d_mxy[c][idxGlobal(x, y)] / Stencil::as4;
-            myy = S.d_myy[c][idxGlobal(x, y)] / (Stencil::as4 * real_t(0.5));
+            M.rho = S.d_rho[c][idxGlobal(x, y)] + RHO_0;
+            M.ux = S.d_ux[c][idxGlobal(x, y)] * inv_scale_factor<MomentId::ux>();
+            M.uy = S.d_uy[c][idxGlobal(x, y)] * inv_scale_factor<MomentId::uy>();
+            M.mxx = S.d_mxx[c][idxGlobal(x, y)] * inv_scale_factor<MomentId::mxx>();
+            M.mxy = S.d_mxy[c][idxGlobal(x, y)] * inv_scale_factor<MomentId::mxy>();
+            M.myy = S.d_myy[c][idxGlobal(x, y)] * inv_scale_factor<MomentId::myy>();
 
-            evaluate_fluid_node(pop, valid_ms, rho, ux, uy, mxx, mxy, myy);
+            evaluate_fluid_node(pop, valid_ms, M);
         }
     }
 
     // 3) scale to the stored basis
-    scale_to_stored_basis(ux, uy, mxx, mxy, myy);
+    scale_to_stored_basis(M);
 
     // 4) collide in moment space
-    moment_space_collision(ux, uy, mxx, mxy, myy);
+    moment_space_collision(M);
 
     // 5) store next
-    store_next_state(S, n, idx, rho, ux, uy, mxx, mxy, myy);
+    store_next_state(S, n, idx, M);
 }
 
 void lbm_mom_step(LBMState &S, const CudaConfig &cfg, const DomainTags &T)

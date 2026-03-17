@@ -38,7 +38,7 @@ int main(int argc, char **argv)
     cudaDeviceProp prop;
     CUDA_CHECK(cudaGetDeviceProperties(&prop, 0));
 
-    CudaConfig cfg = make_config(prop.sharedMemPerBlock);
+    CudaConfig cfg = make_config();
     print_simulation_summary(cfg, prop);
 
     app::RunContext ctx;

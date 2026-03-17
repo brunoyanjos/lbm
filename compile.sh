@@ -52,6 +52,46 @@ make_gencodes() {
 }
 
 # =====================================================
+# Parse CLI args
+# =====================================================
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --stencil)        STENCIL="$2"; shift 2 ;;
+    --real)           REAL="$2"; shift 2 ;;
+    --re)             RE="$2"; shift 2 ;;
+    --run)            RUN="$2"; shift 2 ;;
+    --clean)          CLEAN="$2"; shift 2 ;;
+    --debug)          DEBUG="$2"; shift 2 ;;
+    --rdc)            RDC="$2"; shift 2 ;;
+    --arches)         ARCHES="$2"; shift 2 ;;
+    --exec)           EXEC_NAME="$2"; shift 2 ;;
+    --build_root)     BUILD_ROOT="$2"; shift 2 ;;
+    --out_root)       OUT_ROOT="$2"; shift 2 ;;
+    --reg_order)      REG_ORDER="$2"; shift 2 ;;
+    --run_id)         RUN_ID="$2"; shift 2 ;;
+    --io)             IO="$2"; shift 2 ;;
+    --warmup)         WARMUP="$2"; shift 2 ;;
+    --verbose)        VERBOSE="$2"; shift 2 ;;
+    --progress)       PROGRESS="$2"; shift 2 ;;
+    --progress_hz)    PROGRESS_HZ="$2"; shift 2 ;;
+    --ptxas_verbose)  PTXAS_VERBOSE="$2"; shift 2 ;;
+    --maxrregcount)   MAXRREGCOUNT="$2"; shift 2 ;;
+    -h|--help)
+      cat <<EOF
+Usage:
+  STENCIL=D2Q9 REAL=float bash compile.sh
+  bash compile.sh --stencil D2Q9 --real float --run 1
+EOF
+      exit 0
+      ;;
+    *)
+      die "Unknown argument: '$1'"
+      ;;
+  esac
+done
+
+# =====================================================
 # Validate
 # =====================================================
 
@@ -136,27 +176,34 @@ NVCCFLAGS+=("${GENCODES[@]}")
 # =====================================================
 
 mapfile -d '' CU_FILES < <(find src -type f -name "*.cu" -print0)
-echo "Sources: ${#CU_FILES[@]}"
+TOTAL=${#CU_FILES[@]}
+echo "Sources: ${TOTAL}"
 
 # =====================================================
 # Compile
 # =====================================================
 
 OBJ_FILES=()
+COUNT=0
 
 for cu in "${CU_FILES[@]}"; do
+  ((++COUNT))
+
   rel="${cu#./}"
   objbase="${rel//\//_}"
   obj="${OBJ_DIR}/${objbase%.cu}.o"
   OBJ_FILES+=("${obj}")
 
-  echo "[NVCC] ${cu}"
+  printf "\r[NVCC %2d/%2d] %-70s" "${COUNT}" "${TOTAL}" "${cu}"
+
   if [[ "${RDC}" == "1" ]]; then
     nvcc "${NVCCFLAGS[@]}" -dc "${cu}" -o "${obj}"
   else
     nvcc "${NVCCFLAGS[@]}" -c "${cu}" -o "${obj}"
   fi
 done
+
+printf '\r\033[K'
 
 # =====================================================
 # Link
@@ -166,6 +213,7 @@ echo "[LINK] ${BIN_PATH}"
 LINKFLAGS=()
 if [[ "${RDC}" == "1" ]]; then LINKFLAGS+=(-lcudadevrt); fi
 nvcc "${NVCCFLAGS[@]}" "${OBJ_FILES[@]}" "${LINKFLAGS[@]}" -o "${BIN_PATH}"
+
 echo "✔ Build successful: ${BIN_PATH}"
 
 # =====================================================
@@ -174,7 +222,7 @@ echo "✔ Build successful: ${BIN_PATH}"
 
 if [[ "${RUN}" == "1" ]]; then
   if [[ -z "${RUN_ID}" ]]; then
-    RUN_ID="$(date +%Y%m%d_%H%M%S)"
+    RUN_ID="$(date +%Y%m%d_%H%M%S)_${STENCIL}_${REAL}${RE:+_RE${RE}}"
   fi
 
   OUT_DIR="${OUT_ROOT}/${RUN_ID}"

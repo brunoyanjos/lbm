@@ -128,15 +128,6 @@ namespace D2V17
         }
     }
 
-    __host__ __device__ __forceinline__ void basis2(int i, real_t &cx, real_t &cy, real_t &Hxx, real_t &Hxy, real_t &Hyy)
-    {
-        cx = static_cast<real_t>(D2V17::cx(i));
-        cy = static_cast<real_t>(D2V17::cy(i));
-        Hxx = cx * cx - D2V17::cs2;
-        Hxy = cx * cy;
-        Hyy = cy * cy - D2V17::cs2;
-    }
-
     __host__ __device__ __forceinline__ int opp(int i)
     {
         switch (i)
@@ -181,4 +172,4 @@ namespace D2V17
             return 14; // i==16
         }
     }
-} // namespace D2V17
+}
