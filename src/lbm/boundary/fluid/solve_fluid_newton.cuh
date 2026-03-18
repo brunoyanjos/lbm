@@ -1,10 +1,14 @@
 #pragma once
 
-#include "lbm/boundary/common/system_data.cuh"
 #include "lbm/moment/node_moments.cuh"
 
+#include "lbm/boundary/common/system_data.cuh"
+
+#include "lbm/boundary/fluid/build_newton_step.cuh"
+#include "lbm/boundary/fluid/max_rel_step.cuh"
+
 template <std::size_t N, std::size_t E>
-__device__ __forceinline__ void solve_fluid_newton(const SystemData<N, E> &S, NodeMoments &u)
+__device__ __forceinline__ void solve_fluid_newton(const SystemData<N, E> &S, NodeMoments &M)
 {
     SystemData<N> G{};
 
@@ -15,17 +19,17 @@ __device__ __forceinline__ void solve_fluid_newton(const SystemData<N, E> &S, No
 
     while (error > tol && it++ < it_max)
     {
-        const NodeMoments old = u;
+        const NodeMoments old = M;
 
-        build_newton_step(G, S, u);
+        build_newton_step(G, S, M);
         gaussianElimination(G);
 
-        u.ux += G.x[0];
-        u.uy += G.x[1];
-        u.mxx += G.x[2];
-        u.mxy += G.x[3];
-        u.myy += G.x[4];
+        M.ux += G.x[0];
+        M.uy += G.x[1];
+        M.mxx += G.x[2];
+        M.mxy += G.x[3];
+        M.myy += G.x[4];
 
-        error = max_rel_step(u, old);
+        error = max_rel_step(M, old);
     }
 }
