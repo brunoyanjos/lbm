@@ -4,11 +4,13 @@
 
 #include "core/types.cuh"
 
+#include "lbm/moment/node_moments.cuh"
+
 #include "lbm/boundary/common/system_data.cuh"
 #include "lbm/boundary/common/accumulator.cuh"
 
 template <std::size_t N, std::size_t E, bool HasVelocity>
-__device__ __forceinline__ void build_fluid_system(SystemData<N, E> &S, real_t ux, real_t uy, const MomentAccumulator<HasVelocity> &acc)
+__device__ __forceinline__ void build_fluid_system(SystemData<N, E> &S, const MomentAccumulator<HasVelocity> &acc)
 {
     // uxI equation
     S.coeff(0, 0) = acc.ux.ux - acc.rho.ux * acc.in.ux;

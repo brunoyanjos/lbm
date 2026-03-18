@@ -43,7 +43,7 @@ __device__ inline void evaluate_fluid_node(
 
     SystemData<UnknownMomentList<true>::size, NonLinearSystemList::size> S{};
 
-    build_fluid_system(S, M.ux, M.uy, acc);
+    build_fluid_system(S, acc);
     solve_fluid_newton(S, M);
 
     M.rho = eval_density(acc, M);
