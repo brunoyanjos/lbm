@@ -9,8 +9,6 @@
 #include "lbm/stencil_active.cuh"
 #include "lbm/moment/node_moments.cuh"
 
-#include "lbm/boundary/common/accumulate_incoming.cuh"
-#include "lbm/boundary/common/accumulate_outgoing.cuh"
 #include "lbm/boundary/common/accumulator.cuh"
 #include "lbm/boundary/common/system_data.cuh"
 #include "lbm/boundary/common/gauss_elimination.cuh"
@@ -18,6 +16,10 @@
 #include "lbm/boundary/common/eval_density.cuh"
 
 #include "lbm/boundary/dirichlet/build_boundary_system.cuh"
+#include "lbm/boundary/dirichlet/dirichlet_accumulator.cuh"
+#include "lbm/boundary/dirichlet/dirichlet_eval_density.cuh"
+#include "lbm/boundary/dirichlet/dirichlet_incoming_evaluation.cuh"
+#include "lbm/boundary/dirichlet/dirichlet_outgoing_evaluation.cuh"
 
 __device__ __forceinline__ void apply_boundary(
     real_t *__restrict__ pop,
@@ -27,29 +29,24 @@ __device__ __forceinline__ void apply_boundary(
     const uint32_t outgoing_mask = valid_mask;
     const uint32_t incoming_mask = mask_opp(valid_mask);
 
-    MomentAccumulator<false> acc{};
+    DirichletAccumulator acc{};
 
 #pragma unroll
     for (int i = 0; i < Stencil::Q; ++i)
     {
         if (dir_valid(incoming_mask, i))
-            accumulate_incoming(acc, pop, i);
+            dirichlet_incoming_evaluation(acc, M, pop, i);
 
         if (dir_valid(outgoing_mask, i))
-            accumulate_outgoing(acc, i);
+            dirichlet_outgoing_evaluation(acc, M, i);
     }
 
     acc.in.normalize();
 
-    SystemData<UnknownMomentList<false>::size> S{};
+    M.mxy = (acc.rho.constant * acc.in.mxy - acc.mxy.constant) / (acc.mxy.mxy - acc.rho.mxy * acc.in.mxy);
 
-    build_boundary_system(S, M.ux, M.uy, acc);
+    M.mxx = M.ux * M.ux;
+    M.myy = M.uy * M.uy;
 
-    gaussianElimination(S);
-
-    M.mxx = S.x[0];
-    M.mxy = S.x[1];
-    M.myy = S.x[2];
-
-    M.rho = eval_density(acc, M);
+    M.rho = eval_dirichlet_density(acc, M);
 }
