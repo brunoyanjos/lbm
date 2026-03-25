@@ -21,11 +21,11 @@
 
 __device__ inline void evaluate_fluid_node(
     real_t *__restrict__ pop,
-    uint32_t valid_mask,
+    mask_t valid_mask,
     NodeMoments &M)
 {
-    const uint32_t outgoing_mask = valid_mask;
-    const uint32_t incoming_mask = mask_opp(valid_mask);
+    const mask_t outgoing_mask = valid_mask;
+    const mask_t incoming_mask = mask_opp(valid_mask);
 
     MomentAccumulator<true> acc{};
 

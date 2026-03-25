@@ -4,30 +4,46 @@
 #include "../../core/indexing.cuh"
 
 static_assert(Stencil::Q > 0, "Stencil::Q must be > 0");
-static_assert(Stencil::Q <= 32, "valid_mask is uint32_t; use uint64_t if Q > 32");
+static_assert(Stencil::Q <= 64, "mask_t supports only up to 64 stencil directions");
 
-constexpr __host__ __device__ __forceinline__ uint32_t full_mask()
+__host__ __device__ __forceinline__ static constexpr mask_t full_mask()
 {
-    return (Stencil::Q == 32) ? 0xFFFFFFFFu : (uint32_t(1u) << uint32_t(Stencil::Q)) - 1u;
+    static_assert(Stencil::Q <= 64, "Stencil::Q must be <= 64 for mask_t");
+
+    if constexpr (Stencil::Q == sizeof(mask_t) * 8)
+        return ~mask_t(0);
+    else
+        return (mask_t(1) << Stencil::Q) - mask_t(1);
 }
 
-constexpr __host__ __device__ __forceinline__ bool is_full_mask(uint32_t m)
+__host__ __device__ __forceinline__ constexpr mask_t bit(int i)
 {
-    const uint32_t fm = full_mask();
+    return (mask_t(1) << i);
+}
+
+constexpr __host__ __device__ __forceinline__ bool is_full_mask(mask_t m)
+{
+    const mask_t fm = full_mask();
     return (m & fm) == fm;
 }
-__device__ __forceinline__ bool dir_valid(uint32_t valid_mask, int i)
+__host__ __device__ __forceinline__ bool dir_valid(mask_t valid_mask, int i)
 {
-    return (valid_mask & (uint32_t(1) << uint32_t(i))) != 0u;
+    return (valid_mask & (mask_t(1) << i)) != mask_t(0);
 }
 
-__device__ __forceinline__ uint32_t mask_opp(uint32_t m)
+__host__ __device__ __forceinline__ mask_t mask_opp(mask_t m)
 {
-    uint32_t r = 0u;
+    mask_t r = mask_t(0);
+
+#if defined(__CUDA_ARCH__)
 #pragma unroll
+#endif
     for (int i = 0; i < Stencil::Q; ++i)
-        if (m & (1u << i))
-            r |= (1u << Stencil::opp(i));
+    {
+        if ((m & (mask_t(1) << i)) != mask_t(0))
+            r |= (mask_t(1) << Stencil::opp(i));
+    }
+
     return r;
 }
 
@@ -41,20 +57,26 @@ __host__ __device__ __forceinline__
     return nodes[idxGlobal(x, y)];
 }
 
-__host__ __device__ __forceinline__ int count_on_bits(uint32_t m)
+__host__ __device__ __forceinline__ int count_on_bits(mask_t m)
 {
     m &= full_mask();
 
 #if defined(__CUDA_ARCH__)
-    return __popc(m);
+    if constexpr (sizeof(mask_t) == sizeof(uint32_t))
+        return __popc(static_cast<uint32_t>(m));
+    else
+        return __popcll(static_cast<unsigned long long>(m));
 #else
 #if defined(__GNUC__) || defined(__clang__)
-    return __builtin_popcount(m);
+    if constexpr (sizeof(mask_t) == sizeof(uint32_t))
+        return __builtin_popcount(static_cast<uint32_t>(m));
+    else
+        return __builtin_popcountll(static_cast<unsigned long long>(m));
 #else
     int c = 0;
     while (m)
     {
-        m &= (m - 1u);
+        m &= (m - mask_t(1));
         ++c;
     }
     return c;
@@ -62,12 +84,12 @@ __host__ __device__ __forceinline__ int count_on_bits(uint32_t m)
 #endif
 }
 
-__host__ __device__ __forceinline__ int count_valid_dirs(uint32_t valid_mask)
+__host__ __device__ __forceinline__ int count_valid_dirs(mask_t valid_mask)
 {
     return count_on_bits(valid_mask);
 }
 
-__host__ __device__ __forceinline__ int count_missing_dirs(uint32_t valid_mask)
+__host__ __device__ __forceinline__ int count_missing_dirs(mask_t valid_mask)
 {
     return int(Stencil::Q) - count_on_bits(valid_mask);
 }

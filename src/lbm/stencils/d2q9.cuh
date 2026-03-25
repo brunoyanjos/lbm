@@ -6,8 +6,8 @@ namespace D2Q9
 {
     constexpr int Q = 9;
 
-    constexpr real_t cs2 = static_cast<real_t>(1.0) / static_cast<real_t>(3.0);
-    constexpr real_t as2 = static_cast<real_t>(1.0) / cs2; // = 3
+    constexpr real_t cs2 = r::third;
+    constexpr real_t as2 = r::one / cs2;
     constexpr real_t as4 = as2 * as2;
 
     __host__ __device__ __forceinline__ int cx(int i)

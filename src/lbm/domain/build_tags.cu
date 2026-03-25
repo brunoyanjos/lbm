@@ -5,6 +5,8 @@
 #include "../stencil_active.cuh"
 #include "../../core/cuda_utils.cuh"
 
+#include "lbm/domain/mask_utils.cuh"
+
 #include <cstdlib>
 #include <new>
 
@@ -12,10 +14,10 @@ DomainTags domain_tags_allocate()
 {
     DomainTags T{};
     T.N = static_cast<size_t>(NX) * static_cast<size_t>(NY);
-    T.bytes_valid = T.N * sizeof(uint32_t);
+    T.bytes_valid = T.N * sizeof(mask_t);
     T.bytes_node = T.N * sizeof(uint8_t);
 
-    T.h_valid = static_cast<uint32_t *>(std::malloc(T.bytes_valid));
+    T.h_valid = static_cast<mask_t *>(std::malloc(T.bytes_valid));
     T.h_node = static_cast<uint8_t *>(std::malloc(T.bytes_node));
     if (!T.h_valid || !T.h_node)
     {
@@ -52,7 +54,7 @@ void domain_tags_free(DomainTags &T)
     T.bytes_node = 0;
 }
 
-__global__ void cavity_square_tags_kernel(uint32_t *__restrict__ valid,
+__global__ void cavity_square_tags_kernel(mask_t *__restrict__ valid,
                                           uint8_t *__restrict__ node)
 {
     int x, y;
@@ -74,8 +76,8 @@ __global__ void cavity_square_tags_kernel(uint32_t *__restrict__ valid,
 
     node[idx] = wid;
 
-    uint32_t m = 0u;
-    m |= (1u << 0);
+    mask_t m = mask_t(0);
+    m |= (mask_t(1) << 0);
 
 #pragma unroll
     for (int i = 1; i < Stencil::Q; ++i)
@@ -86,7 +88,7 @@ __global__ void cavity_square_tags_kernel(uint32_t *__restrict__ valid,
         if (xn < 0 || xn >= NX || yn < 0 || yn >= NY)
             continue;
 
-        m |= (1u << i);
+        m |= bit(i);
     }
 
     valid[idx] = m;

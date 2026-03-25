@@ -2,6 +2,8 @@
 #include <cstdint>
 #include <cstddef>
 
+#include "core/mask_type.cuh"
+
 enum class NodeId : uint8_t
 {
     FLUID = 0,
@@ -14,11 +16,11 @@ enum class NodeId : uint8_t
 struct DomainTags
 {
     // device
-    uint32_t *d_valid = nullptr;
+    mask_t *d_valid = nullptr;
     uint8_t *d_node = nullptr;
 
     // host
-    uint32_t *h_valid = nullptr;
+    mask_t *h_valid = nullptr;
     uint8_t *h_node = nullptr;
 
     size_t N = 0;

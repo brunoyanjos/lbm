@@ -95,7 +95,7 @@ done
 # Validate
 # =====================================================
 
-case "${STENCIL}" in D2Q9|D2V17) ;; *) die "Unknown STENCIL='${STENCIL}'" ;; esac
+case "${STENCIL}" in D2Q9|D2V17|D2V37) ;; *) die "Unknown STENCIL='${STENCIL}'" ;; esac
 case "${REAL}" in float|double) ;; *) die "Unknown REAL='${REAL}'" ;; esac
 
 # =====================================================
@@ -147,11 +147,20 @@ else
   NVCCFLAGS+=(-rdc=false)
 fi
 
-if [[ "${STENCIL}" == "D2Q9" ]]; then
-  NVCCFLAGS+=(-DLBM_STENCIL_D2Q9)
-else
-  NVCCFLAGS+=(-DLBM_STENCIL_D2V17)
-fi
+case "${STENCIL}" in
+  D2Q9)
+    NVCCFLAGS+=(-DLBM_STENCIL_D2Q9)
+    ;;
+  D2V17)
+    NVCCFLAGS+=(-DLBM_STENCIL_D2V17)
+    ;;
+  D2V37)
+    NVCCFLAGS+=(-DLBM_STENCIL_D2V37)
+    ;;
+  *)
+    die "Unknown STENCIL='${STENCIL}'"
+    ;;
+esac
 
 if [[ -n "${RE}" ]]; then
   NVCCFLAGS+=(-DLBM_RE="${RE}")

@@ -4,21 +4,23 @@
 #include <cstdint>
 #include <algorithm>
 
-#include "../lbm/stencil_active.cuh" // Stencil::Q, cx, cy
-#include "../core/types.cuh"         // real_t, etc (se precisar)
-#include "../core/cuda_utils.cuh"    // CUDA_CHECK (se quiser)
-#include "../core/math_utils.cuh"    // CUDA_CHECK (se quiser)
-#include "../core/geometry.h"
+#include "lbm/stencil_active.cuh" // Stencil::Q, cx, cy
+#include "core/types.cuh"         // real_t, etc (se precisar)
+#include "core/cuda_utils.cuh"    // CUDA_CHECK (se quiser)
+#include "core/math_utils.cuh"    // CUDA_CHECK (se quiser)
+#include "core/geometry.h"
 
 namespace
 {
     // full mask para Q <= 32
-    static inline uint32_t full_mask_host()
+    static inline constexpr mask_t full_mask_host()
     {
-        if constexpr (Stencil::Q == 32)
-            return 0xFFFFFFFFu;
+        static_assert(Stencil::Q <= 64, "Stencil::Q must be <= 64 for mask_t");
+
+        if constexpr (Stencil::Q == int(sizeof(mask_t) * 8))
+            return ~mask_t(0);
         else
-            return (uint32_t(1u) << uint32_t(Stencil::Q)) - 1u;
+            return (mask_t(1) << Stencil::Q) - mask_t(1);
     }
 
     static inline bool in_bounds(int x, int y)
@@ -84,7 +86,7 @@ namespace io
         }
 
         const uint8_t *nodes = T.h_node;
-        const uint32_t *valid = T.h_valid;
+        const mask_t *valid = T.h_valid;
 
         // ajuste esses casts/ids conforme seu enum NodeId
         const uint8_t FLUID = to_u8(NodeId::FLUID);
@@ -93,7 +95,7 @@ namespace io
         const uint8_t INLET = to_u8(NodeId::INLET);
         const uint8_t OUTLET = to_u8(NodeId::OUTLET);
 
-        const uint32_t FM = full_mask_host();
+        const mask_t FM = full_mask_host();
 
         if (print_domain)
         {
@@ -142,18 +144,19 @@ namespace io
                     if (nid != FLUID)
                         continue;
 
-                    const uint32_t m = valid[idx];
+                    const mask_t m = valid[idx];
                     if (m == FM)
                         continue; // stencil completo -> ignora
 
                     if (!fluid_near_solid(nodes, x, y, FLUID, SOLID))
                         continue; // só fluidos perto do sólido
 
-                    std::printf("(x=%d, y=%d) idx=%zu  mask=0x%08X  bits: ", x, y, idx, m);
+                    std::printf("(x=%d, y=%d) idx=%zu  mask=0x%016llX  bits: ",
+                                x, y, idx, (unsigned long long)m);
 
                     for (int i = 0; i < Stencil::Q; ++i)
                     {
-                        const uint32_t bit = (m >> uint32_t(i)) & 1u;
+                        const mask_t bit = (m >> i) & mask_t(1);
                         std::printf("%u", unsigned(bit));
                         if (i + 1 < Stencil::Q)
                             std::printf(" ");
