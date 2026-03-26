@@ -1,9 +1,12 @@
 #include "build_tags.cuh"
 
-#include "../../core/geometry.h"
-#include "../../core/indexing.cuh"
+#include "core/types.cuh"
+#include "core/geometry.h"
+#include "core/physics.h"
+#include "core/indexing.cuh"
+#include "core/math_utils.cuh"
 #include "../stencil_active.cuh"
-#include "../../core/cuda_utils.cuh"
+#include "core/cuda_utils.cuh"
 
 #include "lbm/domain/mask_utils.cuh"
 
@@ -54,44 +57,93 @@ void domain_tags_free(DomainTags &T)
     T.bytes_node = 0;
 }
 
-__global__ void cavity_square_tags_kernel(mask_t *__restrict__ valid,
-                                          uint8_t *__restrict__ node)
+__global__ void annul_tags_kernel(uint8_t *__restrict__ nodes)
 {
     int x, y;
     const size_t idx = idxThreadGlobal2D(x, y);
     if (idx == INVALID_INDEX)
         return;
 
-    const bool on_left = (x == 0);
-    const bool on_right = (x == NX - 1);
-    const bool on_bottom = (y == 0);
-    const bool on_top = (y == NY - 1);
+    const real_t x_center = r_cast(NX - 1) * r::half;
+    const real_t y_center = r_cast(NY - 1) * r::half;
 
-    const int bc_count = int(on_left) + int(on_right) + int(on_bottom) + int(on_top);
+    const real_t dx = x - x_center;
+    const real_t dy = y - y_center;
 
-    uint8_t wid = to_u8(NodeId::FLUID);
+    const real_t radius = r_sqrt(dx * dx + dy * dy);
 
-    if (bc_count > 0)
-        wid = to_u8(NodeId::DIRICHLET);
+    nodes[idx] = to_u8(NodeId::FLUID);
 
-    node[idx] = wid;
+    if (radius < R_IN || radius > R_OUT)
+        nodes[idx] = to_u8(NodeId::SOLID);
+}
 
-    mask_t m = mask_t(0);
-    m |= (mask_t(1) << 0);
+__global__ void annul_tags_boundary_kernel(uint8_t *__restrict__ nodes)
+{
+    int x, y;
+    const size_t idx = idxThreadGlobal2D(x, y);
+    if (idx == INVALID_INDEX)
+        return;
+
+    const uint8_t node_id = nodes[idx];
+
+    if (node_id == to_u8(NodeId::FLUID))
+        return;
 
 #pragma unroll
     for (int i = 1; i < Stencil::Q; ++i)
     {
-        const int xn = x + Stencil::cx(i);
-        const int yn = y + Stencil::cy(i);
+        uint8_t adj_node = get_node_safe(nodes, x + Stencil::cx(i), y + Stencil::cy(i));
 
-        if (xn < 0 || xn >= NX || yn < 0 || yn >= NY)
-            continue;
+        if (adj_node == to_u8(NodeId::FLUID))
+        {
+            nodes[idx] = to_u8(NodeId::DIRICHLET);
+            break;
+        }
+    }
+}
 
-        m |= bit(i);
+__global__ void init_valid_dirs(const uint8_t *__restrict__ nodes,
+                                uint32_t *__restrict__ out_dirs)
+{
+    int x, y;
+    const size_t idx = idxThreadGlobal2D(x, y);
+    if (idx == INVALID_INDEX)
+        return;
+
+    const uint8_t SOLID = to_u8(NodeId::SOLID);
+
+    if (nodes[idx] == SOLID)
+    {
+        out_dirs[idx] = 0u;
+        return;
     }
 
-    valid[idx] = m;
+    uint32_t m = 0u;
+    m |= (1u << 0);
+
+#pragma unroll
+    for (int i = 1; i < Stencil::Q; ++i)
+    {
+        const int cx = Stencil::cx(i);
+        const int cy = Stencil::cy(i);
+
+        const int xn = x + cx;
+        const int yn = y + cy;
+
+        if (get_node_safe(nodes, xn, yn) == SOLID)
+            continue;
+
+        if (get_node_safe(nodes, xn, y) == SOLID)
+            continue;
+
+        if (get_node_safe(nodes, x, yn) == SOLID)
+            continue;
+
+        m |= (1u << i);
+    }
+
+    out_dirs[idx] = m;
 }
 
 void build_tags(DomainTags &T)
@@ -100,7 +152,13 @@ void build_tags(DomainTags &T)
     dim3 grid((NX + block.x - 1) / block.x,
               (NY + block.y - 1) / block.y, 1);
 
-    cavity_square_tags_kernel<<<grid, block>>>(T.d_valid, T.d_node);
+    annul_tags_kernel<<<grid, block>>>(T.d_node);
+    CUDA_CHECK(cudaGetLastError());
+
+    annul_tags_boundary_kernel<<<grid, block>>>(T.d_node);
+    CUDA_CHECK(cudaGetLastError());
+
+    init_valid_dirs<<<grid, block>>>(T.d_node, T.d_valid);
     CUDA_CHECK(cudaGetLastError());
 
     if (T.h_valid && T.h_node)

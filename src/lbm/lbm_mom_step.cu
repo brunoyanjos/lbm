@@ -6,7 +6,6 @@
 #include "lbm/lbm_mom_step.cuh"
 #include "lbm/stencil_active.cuh"
 #include "lbm/boundary/dirichlet/solver.cuh"
-#include "lbm/boundary/fluid/solver.cuh"
 #include "lbm/boundary/bc_velocity.cuh"
 #include "lbm/collision/collision.cuh"
 #include "lbm/moment/moment_evaluation.cuh"
@@ -29,6 +28,9 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
     const uint8_t node_id = T.d_node[idx];
     const mask_t valid_ms = T.d_valid[idx];
 
+    if (node_id == to_u8(NodeId::SOLID))
+        return;
+
     real_t pop[Stencil::Q];
 
     reconstruct_streamed_pop(pop, S, c, x, y);
@@ -37,27 +39,13 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
 
     if (node_id != to_u8(NodeId::FLUID))
     {
-        bc_velocity(M, x, y);
+        bc_velocity(x, y, M);
 
         apply_boundary(pop, valid_ms, M);
     }
     else
     {
-        if (is_full_mask(valid_ms))
-        {
-            evaluate_moments_from_pop(pop, M);
-        }
-        else
-        {
-            M.rho = S.d_rho[c][idxGlobal(x, y)] + RHO_0;
-            M.ux = S.d_ux[c][idxGlobal(x, y)] * inv_scale_factor<MomentId::ux>();
-            M.uy = S.d_uy[c][idxGlobal(x, y)] * inv_scale_factor<MomentId::uy>();
-            M.mxx = S.d_mxx[c][idxGlobal(x, y)] * inv_scale_factor<MomentId::mxx>();
-            M.mxy = S.d_mxy[c][idxGlobal(x, y)] * inv_scale_factor<MomentId::mxy>();
-            M.myy = S.d_myy[c][idxGlobal(x, y)] * inv_scale_factor<MomentId::myy>();
-
-            evaluate_fluid_node(pop, valid_ms, M);
-        }
+        evaluate_moments_from_pop(pop, M);
     }
 
     // 3) scale to the stored basis

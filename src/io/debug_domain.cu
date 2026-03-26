@@ -37,12 +37,9 @@ namespace
     }
 
     // detecta se é FLUID perto de SOLID (qualquer vizinho sólido em 1..Q-1)
-    static inline bool fluid_near_solid(const uint8_t *nodes, int x, int y,
-                                        uint8_t FLUID, uint8_t SOLID)
+    static inline bool fluid_near_solid(const uint8_t *nodes, int x, int y, uint8_t SOLID)
     {
         const uint8_t me = get_node_safe_host(nodes, x, y, SOLID);
-        if (me != FLUID)
-            return false;
 
         for (int i = 1; i < Stencil::Q; ++i)
         {
@@ -139,17 +136,15 @@ namespace io
                     const size_t idx = size_t(x) + size_t(NX) * size_t(y);
                     const uint8_t nid = nodes[idx];
 
-                    if (nid == DIRICHLET)
-                        continue; // você pediu: não precisa no dirichlet
-                    if (nid != FLUID)
+                    if (nid == SOLID)
                         continue;
 
                     const mask_t m = valid[idx];
                     if (m == FM)
-                        continue; // stencil completo -> ignora
+                        continue;
 
-                    if (!fluid_near_solid(nodes, x, y, FLUID, SOLID))
-                        continue; // só fluidos perto do sólido
+                    if (!fluid_near_solid(nodes, x, y, SOLID))
+                        continue;
 
                     std::printf("(x=%d, y=%d) idx=%zu  mask=0x%016llX  bits: ",
                                 x, y, idx, (unsigned long long)m);

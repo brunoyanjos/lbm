@@ -15,18 +15,21 @@ namespace io
         return out_dir + "/outputs/tke.bin";
     }
 
-    real_t compute_ke_host_2d(const LBMState &state)
+    real_t compute_ke_host_2d(const LBMState &state, const DomainTags &T)
     {
         real_t sum = 0.0;
 
         for (int i = 0; i < int(state.N); ++i)
         {
+            if (T.h_node && T.h_node[i] == to_u8(NodeId::SOLID))
+                continue;
+
             const real_t ux = (real_t)state.h_ux[i] / Stencil::as2;
             const real_t uy = (real_t)state.h_uy[i] / Stencil::as2;
             sum += 0.5 * (ux * ux + uy * uy);
         }
 
-        real_t norm = state.N * U_LID * U_LID;
+        real_t norm = state.N * U_MAX * U_MAX;
         real_t inv_norm = real_t(1) / norm;
 
         sum *= inv_norm;

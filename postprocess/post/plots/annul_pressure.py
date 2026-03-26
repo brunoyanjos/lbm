@@ -50,8 +50,8 @@ def plot_annul_pressure(
     if nx <= 0:
         raise ValueError("sim_meta missing nx")
 
-    Rin = nx * 0.25
-    Rout = (nx - 1) * 0.5
+    Rin = np.min(r)
+    Rout = np.max(r)
     gap = Rout - Rin
     if gap <= 0:
         raise ValueError("Invalid annular gap")

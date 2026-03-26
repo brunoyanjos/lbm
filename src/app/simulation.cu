@@ -7,7 +7,7 @@
 #include "../io/output_vtk.cuh"
 #include "../io/debug_domain.cuh"
 #include "../io/output_tke_bin.cuh"
-#include "../io/output_centerline_bin.cuh"
+#include "../io/output.cuh"
 
 #include "../lbm/state/lbm_state.cuh"
 #include "../lbm/lbm_init_state.cuh"
@@ -81,10 +81,10 @@ namespace app
             {
                 upload_state_to_host(state);
 
-                const double ke = io::compute_ke_host_2d(state);
+                const double ke = io::compute_ke_host_2d(state, tags);
 
                 io::tke_bin_append(ctx.out_dir, t, ke);
-                io::write_vti(state, cfg, t, ctx.out_dir);
+                io::write_vti(state, t, ctx.out_dir);
             }
 
             // barra (limite de frequência dentro do ProgressUI)
@@ -112,7 +112,8 @@ namespace app
         if (ctx.enable_io)
         {
             upload_state_to_host(state);
-            io::write_centerline_profiles(state, t_end * U_LID / NX, ctx.out_dir);
+
+            io::outputs(state, t_end, ctx.out_dir, tags);
         }
 
         const double gpu_s = gt.stop_seconds();

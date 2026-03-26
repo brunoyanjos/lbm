@@ -21,7 +21,6 @@ set -euo pipefail
 : "${RUN:=1}"
 : "${RE:=}"
 : "${RUN_ID:=}"
-: "${STENCIL:=D2Q9}"
 : "${VERBOSE:=0}"
 : "${WARMUP:=100}"
 
@@ -57,7 +56,6 @@ make_gencodes() {
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --stencil)        STENCIL="$2"; shift 2 ;;
     --real)           REAL="$2"; shift 2 ;;
     --re)             RE="$2"; shift 2 ;;
     --run)            RUN="$2"; shift 2 ;;
@@ -80,8 +78,8 @@ while [[ $# -gt 0 ]]; do
     -h|--help)
       cat <<EOF
 Usage:
-  STENCIL=D2Q9 REAL=float bash compile.sh
-  bash compile.sh --stencil D2Q9 --real float --run 1
+  REAL=float bash compile.sh
+  bash compile.sh --real float --run 1
 EOF
       exit 0
       ;;
@@ -95,7 +93,6 @@ done
 # Validate
 # =====================================================
 
-case "${STENCIL}" in D2Q9|D2V17|D2V37) ;; *) die "Unknown STENCIL='${STENCIL}'" ;; esac
 case "${REAL}" in float|double) ;; *) die "Unknown REAL='${REAL}'" ;; esac
 
 # =====================================================
@@ -110,13 +107,13 @@ mapfile -t GENCODES < <(make_gencodes "${ARCHES}")
 # Build dirs
 # =====================================================
 
-CFG_TAG="${STENCIL}_${REAL}"
+CFG_TAG="D2Q9_${REAL}"
 BUILD_DIR="${BUILD_ROOT}/${CFG_TAG}"
 OBJ_DIR="${BUILD_DIR}/obj"
 BIN_PATH="${BUILD_DIR}/${EXEC_NAME}"
 
 echo "ARCHES: ${ARCHES}"
-echo "STENCIL=${STENCIL} REAL=${REAL}"
+echo "STENCIL=D2Q9 REAL=${REAL}"
 echo "DEBUG=${DEBUG} RDC=${RDC} CLEAN=${CLEAN}"
 echo "BUILD_DIR: ${BUILD_DIR}"
 
@@ -147,20 +144,6 @@ else
   NVCCFLAGS+=(-rdc=false)
 fi
 
-case "${STENCIL}" in
-  D2Q9)
-    NVCCFLAGS+=(-DLBM_STENCIL_D2Q9)
-    ;;
-  D2V17)
-    NVCCFLAGS+=(-DLBM_STENCIL_D2V17)
-    ;;
-  D2V37)
-    NVCCFLAGS+=(-DLBM_STENCIL_D2V37)
-    ;;
-  *)
-    die "Unknown STENCIL='${STENCIL}'"
-    ;;
-esac
 
 if [[ -n "${RE}" ]]; then
   NVCCFLAGS+=(-DLBM_RE="${RE}")
@@ -231,7 +214,7 @@ echo "✔ Build successful: ${BIN_PATH}"
 
 if [[ "${RUN}" == "1" ]]; then
   if [[ -z "${RUN_ID}" ]]; then
-    RUN_ID="$(date +%Y%m%d_%H%M%S)_${STENCIL}_${REAL}${RE:+_RE${RE}}"
+    RUN_ID="$(date +%Y%m%d_%H%M%S)_D2Q9_annul_rbc_${REAL}${RE:+_RE${RE}}"
   fi
 
   OUT_DIR="${OUT_ROOT}/${RUN_ID}"

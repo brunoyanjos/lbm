@@ -16,29 +16,23 @@ __device__ __forceinline__ void evaluate_moments_from_pop(const real_t *__restri
 #pragma unroll
     for (int i = 0; i < Stencil::Q; ++i)
     {
-        const real_t cx = static_cast<real_t>(Stencil::cx(i));
-        const real_t cy = static_cast<real_t>(Stencil::cy(i));
-
-        const real_t Hxx = cx * cx - Stencil::cs2;
-        const real_t Hxy = cx * cy;
-        const real_t Hyy = cy * cy - Stencil::cs2;
-
         const real_t fi = pop[i];
 
         M.rho += fi;
 
-        M.ux += fi * cx;
-        M.uy += fi * cy;
+        M.ux += fi * hermite<MomentId::ux>(i);
+        M.uy += fi * hermite<MomentId::uy>(i);
 
-        M.mxx += fi * Hxx;
-        M.mxy += fi * Hxy;
-        M.myy += fi * Hyy;
+        M.mxx += fi * hermite<MomentId::mxx>(i);
+        M.mxy += fi * hermite<MomentId::mxy>(i);
+        M.myy += fi * hermite<MomentId::myy>(i);
     }
 
-    const real_t inv_rho = real_t(1) / M.rho;
+    const real_t inv_rho = r::one / M.rho;
 
     M.ux *= inv_rho;
     M.uy *= inv_rho;
+
     M.mxx *= inv_rho;
     M.mxy *= inv_rho;
     M.myy *= inv_rho;

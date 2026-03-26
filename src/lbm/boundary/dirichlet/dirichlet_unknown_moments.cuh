@@ -4,4 +4,6 @@
 #include "lbm/moment/moment_id.cuh"
 
 using DirichletUnknownMoments = IdList<
-    MomentId::mxy>;
+    MomentId::mxx,
+    MomentId::mxy,
+    MomentId::myy>;

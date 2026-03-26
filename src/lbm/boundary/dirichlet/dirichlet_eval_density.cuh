@@ -7,7 +7,8 @@
 
 [[nodiscard]] __device__ __forceinline__ real_t eval_dirichlet_density(const DirichletAccumulator &acc, const NodeMoments &M)
 {
-    const real_t rho_denominator = acc.rho.constant + M.mxy * acc.rho.mxy;
+    const real_t rho_denominator = acc.rho.constant + M.mxx * acc.rho.mxx +
+                                   M.mxy * acc.rho.mxy + M.myy * acc.rho.myy;
 
     const real_t inv_rho = r::one / rho_denominator;
 
