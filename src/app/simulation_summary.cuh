@@ -21,15 +21,7 @@ inline void print_simulation_summary(const CudaConfig &cfg,
 
     // Stencil
     std::cout << "Stencil           : ";
-#if defined(LBM_STENCIL_D2Q9)
     std::cout << "D2Q9\n";
-#elif defined(LBM_STENCIL_D2V17)
-    std::cout << "D2V17\n";
-#elif defined(LBM_STENCIL_D2V37)
-    std::cout << "D2V37\n";
-#else
-    std::cout << "UNKNOWN\n";
-#endif
 
     std::cout << "Q                 : " << Stencil::Q << "\n";
     std::cout << "cs^2              : " << Stencil::cs2 << "\n\n";
