@@ -4,7 +4,7 @@
 #include "../lbm/stencil_active.cuh"
 
 #ifndef LBM_RE
-#define LBM_RE 25.0
+#define LBM_RE 250.0
 #endif
 
 constexpr real_t RE = static_cast<real_t>(LBM_RE);
