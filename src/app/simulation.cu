@@ -17,19 +17,59 @@
 #include "../core/cuda_utils.cuh"
 #include "../core/simulation_config.h"
 #include "../core/geometry.h"
+#include "core/indexing.cuh"
 
 #include <chrono>
 #include <iostream>
 
 namespace app
 {
-    void run(const CudaConfig &cfg, const RunContext &ctx)
+
+    struct SimulationData
+    {
+        int number_of_fluid_nodes = 0;
+        int number_of_dirichlet = 0;
+
+        int total_nodes() const
+        {
+            return number_of_fluid_nodes + number_of_dirichlet;
+        }
+    };
+
+    inline SimulationData evaluate_domain_data(const DomainTags &T)
+    {
+        SimulationData D{};
+
+        for (int y = 0; y < NY; ++y)
+        {
+            for (int x = 0; x < NX; ++x)
+            {
+                uint8_t node = T.h_node[idxGlobal(x, y)];
+
+                if (node == to_u8(NodeId::FLUID))
+                {
+                    D.number_of_fluid_nodes++;
+                }
+                if (node == to_u8(NodeId::DIRICHLET))
+                {
+                    D.number_of_dirichlet++;
+                }
+            }
+        }
+
+        return D;
+    }
+
+    void
+    run(const CudaConfig &cfg, const RunContext &ctx)
     {
         auto state = lbm_allocate_state();
         init_state(state, cfg);
 
         DomainTags tags = domain_tags_allocate();
         build_tags(tags);
+
+        auto sim_data = evaluate_domain_data(tags);
 
         if (ctx.verbose)
         {
@@ -102,7 +142,7 @@ namespace app
                 const double wall_elapsed_s = std::chrono::duration<double>(now - wall0).count();
 
                 const int done_steps = (t - t_begin + 1);
-                const double updates = double(NX) * double(NY) * double(done_steps);
+                const double updates = double(sim_data.total_nodes()) * double(done_steps);
                 const double mlups_partial = (gpu_elapsed_s > 0.0) ? (updates / gpu_elapsed_s / 1e6) : 0.0;
 
                 ui.print(t, wall_elapsed_s, gpu_elapsed_s, mlups_partial);
@@ -126,11 +166,13 @@ namespace app
         r.wall_seconds = wall_s;
         r.measured_steps = (N_STEPS - ctx.warmup_steps);
 
-        const double updates = double(NX) * double(NY) * double(r.measured_steps);
+        const double updates = double(sim_data.total_nodes()) * double(r.measured_steps);
         r.mlups_gpu = updates / r.gpu_seconds / 1e6;
         r.mlups_wall = updates / r.wall_seconds / 1e6;
 
-        io::write_performance(ctx.out_dir, cfg, r);
+        io::write_performance(ctx.out_dir, cfg, r, sim_data.number_of_dirichlet,
+                              sim_data.number_of_fluid_nodes,
+                              sim_data.total_nodes());
 
         ui.finish(false);
 

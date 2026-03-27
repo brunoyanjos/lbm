@@ -7,5 +7,8 @@ namespace io
 {
     void write_performance(const std::string &out_dir,
                            const CudaConfig &cfg,
-                           const app::BenchmarkResult &r);
+                           const app::BenchmarkResult &r,
+                           int total_boundary,
+                           int total_fluid,
+                           int total_points);
 }

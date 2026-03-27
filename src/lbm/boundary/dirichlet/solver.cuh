@@ -42,7 +42,7 @@ __device__ __forceinline__ void apply_boundary(
 
     acc.in.normalize();
 
-    SystemData<DirichletUnknownMoments::size> S;
+    SystemData<DirichletUnknownMoments::size> S{};
 
     build_dirichlet_system(S, acc);
     gaussianElimination(S);

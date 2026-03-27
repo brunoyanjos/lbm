@@ -9,7 +9,10 @@ namespace io
 {
     void write_performance(const std::string &out_dir,
                            const CudaConfig &,
-                           const app::BenchmarkResult &r)
+                           const app::BenchmarkResult &r,
+                           int total_boundary,
+                           int total_fluid,
+                           int total_points)
     {
         namespace fs = std::filesystem;
         fs::create_directories(fs::path(out_dir) / "meta");
@@ -18,6 +21,9 @@ namespace io
         f << std::fixed << std::setprecision(6);
         f << "NX " << NX << "\n";
         f << "NY " << NY << "\n";
+        f << "total_boundary " << total_boundary << "\n";
+        f << "total_fluid " << total_fluid << "\n";
+        f << "total_points " << total_points << "\n";
         f << "measured_steps " << r.measured_steps << "\n";
         f << "gpu_seconds " << r.gpu_seconds << "\n";
         f << "wall_seconds " << r.wall_seconds << "\n";
