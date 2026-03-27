@@ -50,7 +50,7 @@ namespace app
                 {
                     D.number_of_fluid_nodes++;
                 }
-                if (node == to_u8(NodeId::DIRICHLET))
+                else if (node != to_u8(NodeId::SOLID))
                 {
                     D.number_of_dirichlet++;
                 }

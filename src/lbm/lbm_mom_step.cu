@@ -41,7 +41,7 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
     {
         bc_velocity(x, y, M);
 
-        apply_boundary(pop, valid_ms, M);
+        apply_boundary(pop, node_id, M);
     }
     else
     {

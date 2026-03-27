@@ -214,7 +214,7 @@ echo "✔ Build successful: ${BIN_PATH}"
 
 if [[ "${RUN}" == "1" ]]; then
   if [[ -z "${RUN_ID}" ]]; then
-    RUN_ID="$(date +%Y%m%d_%H%M%S)_D2Q9_annul_rbc_${REAL}${RE:+_RE${RE}}"
+    RUN_ID="$(date +%Y%m%d_%H%M%S)_D2Q9_annul_rbc_anal_${REAL}${RE:+_RE${RE}}"
   fi
 
   OUT_DIR="${OUT_ROOT}/${RUN_ID}"
