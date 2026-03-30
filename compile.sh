@@ -19,6 +19,7 @@ set -euo pipefail
 : "${RDC:=0}"
 : "${REAL:=float}"
 : "${RUN:=1}"
+: "${GRID:=128}"
 : "${RE:=}"
 : "${RUN_ID:=}"
 : "${VERBOSE:=0}"
@@ -75,11 +76,14 @@ while [[ $# -gt 0 ]]; do
     --progress_hz)    PROGRESS_HZ="$2"; shift 2 ;;
     --ptxas_verbose)  PTXAS_VERBOSE="$2"; shift 2 ;;
     --maxrregcount)   MAXRREGCOUNT="$2"; shift 2 ;;
+    --grid)           GRID="$2"; shift 2 ;;
     -h|--help)
       cat <<EOF
 Usage:
   REAL=float bash compile.sh
   bash compile.sh --real float --run 1
+  bash compile.sh --grid 512
+  GRID=1024 bash compile.sh
 EOF
       exit 0
       ;;
@@ -93,7 +97,24 @@ done
 # Validate
 # =====================================================
 
-case "${REAL}" in float|double) ;; *) die "Unknown REAL='${REAL}'" ;; esac
+case "${REAL}" in
+  float|double) ;;
+  *)
+    die "Unknown REAL='${REAL}'"
+    ;;
+esac
+
+case "${GRID}" in
+  ''|*[!0-9]*)
+    die "GRID must be a positive integer, got '${GRID}'"
+    ;;
+  *)
+    ;;
+esac
+
+if [[ "${GRID}" -le 0 ]]; then
+  die "GRID must be > 0"
+fi
 
 # =====================================================
 # ARCHES
@@ -107,13 +128,14 @@ mapfile -t GENCODES < <(make_gencodes "${ARCHES}")
 # Build dirs
 # =====================================================
 
-CFG_TAG="D2Q9_${REAL}"
+CFG_TAG="D2Q9_G${GRID}_${REAL}"
 BUILD_DIR="${BUILD_ROOT}/${CFG_TAG}"
 OBJ_DIR="${BUILD_DIR}/obj"
 BIN_PATH="${BUILD_DIR}/${EXEC_NAME}"
 
 echo "ARCHES: ${ARCHES}"
 echo "STENCIL=D2Q9 REAL=${REAL}"
+echo "GRID=${GRID}"
 echo "DEBUG=${DEBUG} RDC=${RDC} CLEAN=${CLEAN}"
 echo "BUILD_DIR: ${BUILD_DIR}"
 
@@ -131,6 +153,7 @@ rm -f "${BIN_PATH}"
 
 NVCCFLAGS=(-std=c++17 -lineinfo --restrict -Isrc)
 NVCCFLAGS+=(-Xcompiler -Wall -Xcompiler -Wextra)
+NVCCFLAGS+=(-DLBM_GRID="${GRID}")
 
 if [[ "${DEBUG}" == "1" ]]; then
   NVCCFLAGS+=(-O0 -g -G)
@@ -143,7 +166,6 @@ if [[ "${RDC}" == "1" ]]; then
 else
   NVCCFLAGS+=(-rdc=false)
 fi
-
 
 if [[ -n "${RE}" ]]; then
   NVCCFLAGS+=(-DLBM_RE="${RE}")
@@ -203,7 +225,9 @@ printf '\r\033[K'
 
 echo "[LINK] ${BIN_PATH}"
 LINKFLAGS=()
-if [[ "${RDC}" == "1" ]]; then LINKFLAGS+=(-lcudadevrt); fi
+if [[ "${RDC}" == "1" ]]; then
+  LINKFLAGS+=(-lcudadevrt)
+fi
 nvcc "${NVCCFLAGS[@]}" "${OBJ_FILES[@]}" "${LINKFLAGS[@]}" -o "${BIN_PATH}"
 
 echo "✔ Build successful: ${BIN_PATH}"
@@ -214,7 +238,7 @@ echo "✔ Build successful: ${BIN_PATH}"
 
 if [[ "${RUN}" == "1" ]]; then
   if [[ -z "${RUN_ID}" ]]; then
-    RUN_ID="$(date +%Y%m%d_%H%M%S)_D2Q9_annul_rbc_${REAL}${RE:+_RE${RE}}"
+    RUN_ID="$(date +%Y%m%d_%H%M%S)_D2Q9_G${GRID}_annul_rbc_${REAL}${RE:+_RE${RE}}"
   fi
 
   OUT_DIR="${OUT_ROOT}/${RUN_ID}"
