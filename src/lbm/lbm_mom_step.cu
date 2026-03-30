@@ -26,7 +26,6 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
     const int n = S.cur ^ 1;
 
     const uint8_t node_id = T.d_node[idx];
-    const mask_t valid_ms = T.d_valid[idx];
 
     if (node_id == to_u8(NodeId::SOLID))
         return;
