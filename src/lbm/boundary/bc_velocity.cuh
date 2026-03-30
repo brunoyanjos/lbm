@@ -26,15 +26,15 @@ __device__ __forceinline__ void bc_velocity(int x, int y, NodeMoments &M)
     M.ux = r::zero;
     M.uy = r::zero;
 
-    // real_t c, s, r;
-    // polar_unit_vectors(x, y, c, s, r);
+    real_t c, s, r;
+    polar_unit_vectors(x, y, c, s, r);
 
-    // const real_t tol = (R_OUT + R_IN) / 2;
+    const real_t tol = (R_OUT + R_IN) / 2;
 
-    // if (r < tol)
-    // {
-    //     const real_t utheta = U_MAX;
-    //     M.ux = -utheta * s;
-    //     M.uy = utheta * c;
-    // }
+    if (r < tol)
+    {
+        const real_t utheta = U_MAX;
+        M.ux = -utheta * s;
+        M.uy = utheta * c;
+    }
 }

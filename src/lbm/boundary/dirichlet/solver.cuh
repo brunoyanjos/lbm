@@ -78,12 +78,12 @@ __device__ __forceinline__ void apply_boundary(
             (real_t(9) * M.rho);
 
         M.mxy =
-            -(real_t(18) * mxxI * rhoI + real_t(132) * mxyI * rhoI + real_t(18) * myyI * rhoI + real_t(7) * M.rho - real_t(7) * M.ux * M.rho + real_t(7) * M.uy * M.rho) /
+            -(-real_t(18) * mxxI * rhoI - real_t(132) * mxyI * rhoI - real_t(18) * myyI * rhoI - real_t(7) * M.rho + real_t(7) * M.ux * M.rho - real_t(7) * M.uy * M.rho) /
             (real_t(27) * M.rho);
 
         M.myy =
-            (real_t(2) *
-             (-real_t(6) * mxyI * rhoI - real_t(9) * myyI * rhoI - M.rho + M.ux * M.rho + real_t(2) * M.uy * M.rho)) /
+            -(real_t(2) *
+              (-real_t(6) * mxyI * rhoI - real_t(9) * myyI * rhoI - M.rho + M.ux * M.rho + real_t(2) * M.uy * M.rho)) /
             (real_t(9) * M.rho);
 
         break;
@@ -279,7 +279,7 @@ __device__ __forceinline__ void apply_boundary(
             (real_t(69) * M.rho);
 
         M.mxy =
-            (real_t(3) * mxxI * rhoI - real_t(32) * mxyI * rhoI + real_t(3) * myyI * rhoI + M.rho + real_t(3) * M.ux * M.rho - real_t(3) * M.uy * M.rho) /
+            -(real_t(3) * mxxI * rhoI - real_t(32) * mxyI * rhoI + real_t(3) * myyI * rhoI + M.rho + real_t(3) * M.ux * M.rho - real_t(3) * M.uy * M.rho) /
             (real_t(23) * M.rho);
 
         M.myy =
