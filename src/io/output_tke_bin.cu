@@ -18,6 +18,7 @@ namespace io
     real_t compute_ke_host_2d(const LBMState &state, const DomainTags &T)
     {
         real_t sum = 0.0;
+        int count = 0;
 
         for (int i = 0; i < int(state.N); ++i)
         {
@@ -27,9 +28,10 @@ namespace io
             const real_t ux = (real_t)state.h_ux[i] / Stencil::as2;
             const real_t uy = (real_t)state.h_uy[i] / Stencil::as2;
             sum += 0.5 * (ux * ux + uy * uy);
+            count++;
         }
 
-        real_t norm = state.N * U_MAX * U_MAX;
+        real_t norm = count * U_MAX * U_MAX;
         real_t inv_norm = real_t(1) / norm;
 
         sum *= inv_norm;

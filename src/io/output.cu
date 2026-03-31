@@ -145,7 +145,7 @@ namespace io
         const int32_t n32 = (int32_t)r_prof.size();
         const int32_t t32 = (int32_t)t;
         const int32_t y32 = (int32_t)y_line;
-        const int32_t x032 = (int32_t)x_begin; // agora é o começo do sweep, não o primeiro fluido
+        const int32_t x032 = (int32_t)x_begin;
 
         const std::string path = annul_profile_path(out_dir);
         std::ofstream f(path, std::ios::binary);
