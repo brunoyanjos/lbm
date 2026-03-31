@@ -4,6 +4,10 @@
 #include "../core/simulation_config.h"
 #include "../lbm/stencil_active.cuh"
 
+#include "lbm/hermite/hermite.cuh"
+#include "lbm/moment/moment_id.cuh"
+#include "core/indexing.cuh"
+
 #include <fstream>
 #include <cstdint>
 #include <string>
@@ -20,15 +24,40 @@ namespace io
         real_t sum = 0.0;
         int count = 0;
 
-        for (int i = 0; i < int(state.N); ++i)
+        for (int y = 0; y < NY; ++y)
         {
-            if (T.h_node && T.h_node[i] == to_u8(NodeId::SOLID))
-                continue;
+            for (int x = 0; x < NX; ++x)
+            {
+                const size_t idx = idxGlobal(x, y);
 
-            const real_t ux = (real_t)state.h_ux[i] / Stencil::as2;
-            const real_t uy = (real_t)state.h_uy[i] / Stencil::as2;
-            sum += 0.5 * (ux * ux + uy * uy);
-            count++;
+                if (T.h_node && T.h_node[idx] == to_u8(NodeId::SOLID))
+                    continue;
+
+                for (int i = 0; i < Stencil::Q; ++i)
+                {
+                    const int cx = Stencil::cx(i);
+                    const int cy = Stencil::cy(i);
+
+                    const real_t rho = state.h_rho[idx] + RHO_0;
+                    const real_t ux = state.h_ux[idx];
+                    const real_t uy = state.h_uy[idx];
+                    const real_t mxx = state.h_mxx[idx];
+                    const real_t mxy = state.h_mxy[idx];
+                    const real_t myy = state.h_myy[idx];
+
+                    const real_t fi = Stencil::w(i) * rho *
+                                      (r::one +
+                                       ux * hermite<MomentId::ux>(i) + uy * hermite<MomentId::uy>(i) +
+                                       mxx * hermite<MomentId::mxx>(i) + mxy * hermite<MomentId::mxy>(i) +
+                                       myy * hermite<MomentId::myy>(i));
+
+                    const real_t ci2 = r_cast(cx) * r_cast(cx) + r_cast(cy) * r_cast(cy);
+
+                    sum += fi * ci2 * r::half;
+                }
+
+                count++;
+            }
         }
 
         real_t norm = count * U_MAX * U_MAX;
