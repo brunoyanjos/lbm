@@ -35,7 +35,7 @@ for stencil in "${stencils[@]}"; do
 
     export STENCIL="${stencil}"
     export GRID="${grid}"
-    export RUN_ID="${ts}_${stencil}_G${GRID}"
+    export RUN_ID="${ts}_${stencil}_G${GRID}_annul_rbc"
 
     echo "================================================="
     echo "[CASE] STENCIL=${STENCIL}  GRID=${GRID}  RUN_ID=${RUN_ID}"
