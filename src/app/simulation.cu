@@ -124,7 +124,7 @@ namespace app
                 const double ke = io::compute_ke_host_2d(state, tags);
 
                 io::tke_bin_append(ctx.out_dir, t, ke);
-                // io::write_vti(state, t, ctx.out_dir);
+                io::write_vti(state, t, ctx.out_dir);
             }
 
             // barra (limite de frequência dentro do ProgressUI)
