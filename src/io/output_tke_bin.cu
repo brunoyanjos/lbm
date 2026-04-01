@@ -7,10 +7,12 @@
 #include "lbm/hermite/hermite.cuh"
 #include "lbm/moment/moment_id.cuh"
 #include "core/indexing.cuh"
+#include "lbm/moment/scale_factor.cuh"
 
 #include <fstream>
 #include <cstdint>
 #include <string>
+#include <iostream>
 
 namespace io
 {
@@ -33,17 +35,21 @@ namespace io
                 if (T.h_node && T.h_node[idx] == to_u8(NodeId::SOLID))
                     continue;
 
+                real_t rho_E = 0.0;
+                real_t rho_e = 0.0;
+
+                const real_t rho = state.h_rho[idx] + RHO_0;
+                const real_t inv_rho = r::one / rho;
+                const real_t ux = state.h_ux[idx];
+                const real_t uy = state.h_uy[idx];
+                const real_t mxx = state.h_mxx[idx];
+                const real_t mxy = state.h_mxy[idx];
+                const real_t myy = state.h_myy[idx];
+
                 for (int i = 0; i < Stencil::Q; ++i)
                 {
                     const int cx = Stencil::cx(i);
                     const int cy = Stencil::cy(i);
-
-                    const real_t rho = state.h_rho[idx] + RHO_0;
-                    const real_t ux = state.h_ux[idx];
-                    const real_t uy = state.h_uy[idx];
-                    const real_t mxx = state.h_mxx[idx];
-                    const real_t mxy = state.h_mxy[idx];
-                    const real_t myy = state.h_myy[idx];
 
                     const real_t fi = Stencil::w(i) * rho *
                                       (r::one +
@@ -52,9 +58,16 @@ namespace io
                                        myy * hermite<MomentId::myy>(i));
 
                     const real_t ci2 = r_cast(cx) * r_cast(cx) + r_cast(cy) * r_cast(cy);
+                    const real_t cix_ux = r_cast(cx) - ux * inv_scale_factor<MomentId::ux>();
+                    const real_t ciy_uy = r_cast(cy) - uy * inv_scale_factor<MomentId::uy>();
 
-                    sum += fi * ci2 * r::half;
+                    const real_t ci_u2 = cix_ux * cix_ux + ciy_uy * ciy_uy;
+
+                    rho_E += fi * ci2 * r::half;
+                    rho_e += fi * ci_u2 * r::half;
                 }
+
+                sum += (rho_E - rho_e);
 
                 count++;
             }

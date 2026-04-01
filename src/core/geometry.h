@@ -7,8 +7,8 @@
 constexpr int NX = LBM_GRID;
 constexpr int NY = LBM_GRID;
 #else
-constexpr int NX = 512;
-constexpr int NY = 512;
+constexpr int NX = 32;
+constexpr int NY = 32;
 #endif
 
 constexpr real_t xc = NX / 2;
