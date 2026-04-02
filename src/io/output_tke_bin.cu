@@ -32,7 +32,7 @@ namespace io
             {
                 const size_t idx = idxGlobal(x, y);
 
-                if (T.h_node && T.h_node[idx] == to_u8(NodeId::SOLID))
+                if (T.h_node && T.h_node[idx] != to_u8(NodeId::FLUID))
                     continue;
 
                 real_t rho_E = 0.0;
