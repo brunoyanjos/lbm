@@ -67,7 +67,7 @@ namespace io
                     rho_e += fi * ci_u2 * r::half;
                 }
 
-                sum += (rho_E - rho_e);
+                sum += (rho_E - rho_e) * inv_rho;
 
                 count++;
             }
