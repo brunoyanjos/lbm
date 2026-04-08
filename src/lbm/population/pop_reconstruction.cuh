@@ -11,6 +11,9 @@ __device__ __forceinline__ void reconstruct_streamed_pop(real_t *__restrict__ po
                                                          int c,
                                                          int x, int y)
 {
+    const real_t one_minus_omega = r::one - OMEGA;
+    const real_t half_omega = r::half * OMEGA;
+
 #pragma unroll
     for (int i = 0; i < Stencil::Q; ++i)
     {
@@ -22,9 +25,13 @@ __device__ __forceinline__ void reconstruct_streamed_pop(real_t *__restrict__ po
         const real_t rho = S.d_rho[c][n_idx] + RHO_0;
         const real_t ux = S.d_ux[c][n_idx];
         const real_t uy = S.d_uy[c][n_idx];
-        const real_t mxx = S.d_mxx[c][n_idx];
-        const real_t mxy = S.d_mxy[c][n_idx];
-        const real_t myy = S.d_myy[c][n_idx];
+        real_t mxx = S.d_mxx[c][n_idx];
+        real_t mxy = S.d_mxy[c][n_idx];
+        real_t myy = S.d_myy[c][n_idx];
+
+        mxx = one_minus_omega * mxx + half_omega * ux * ux;
+        mxy = one_minus_omega * mxy + OMEGA * ux * uy;
+        myy = one_minus_omega * myy + half_omega * uy * uy;
 
         pop[i] = Stencil::w(i) * rho *
                  (r::one +
