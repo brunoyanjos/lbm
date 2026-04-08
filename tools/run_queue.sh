@@ -21,6 +21,7 @@ grids=(
   128
   256
   512
+  1024
 )
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
