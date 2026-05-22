@@ -14,7 +14,7 @@ build/
 # ===============================
 postprocess/outcomes/
 postprocess/.venv/
-postprocess/
+postprocess/*
 
 # setuptools metadata
 *.egg-info/

@@ -10,8 +10,11 @@ set -euo pipefail
 : "${CLEAN:=0}"
 : "${DEBUG:=0}"
 : "${EXEC_NAME:=sim}"
+: "${GRID:=}"
 : "${IO:=1}"
 : "${MAXRREGCOUNT:=0}"
+: "${NX:=128}"
+: "${NY:=128}"
 : "${OUT_ROOT:=runs}"
 : "${PROGRESS:=1}"
 : "${PROGRESS_HZ:=2}"
@@ -33,22 +36,35 @@ die() { echo "Error: $*" >&2; exit 1; }
 
 detect_arches_from_system() {
   local caps
-  caps="$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | tr -d '.[:space:]')" || true
+  caps="$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | tr -d '.' | awk '/^[0-9]+$/ {print}')" || true
   if [[ -z "${caps}" ]]; then echo ""; return 0; fi
   echo "${caps}" | awk '!seen[$0]++' | sort -n | tr '\n' ' ' | sed 's/[[:space:]]*$//'
 }
 
 make_gencodes() {
   local arches="$1"
-  local -a gencodes=()
+  GENCODES=()
   for a in ${arches}; do
     [[ "${a}" =~ ^[0-9]+$ ]] || die "ARCHES contains non-numeric entry: '${a}'"
-    gencodes+=(-gencode "arch=compute_${a},code=sm_${a}")
+    GENCODES+=(-gencode "arch=compute_${a},code=sm_${a}")
   done
   local lowest
   lowest="$(echo "${arches}" | tr ' ' '\n' | sort -n | head -n 1)"
-  gencodes+=(-gencode "arch=compute_${lowest},code=compute_${lowest}")
-  printf '%s\n' "${gencodes[@]}"
+  GENCODES+=(-gencode "arch=compute_${lowest},code=compute_${lowest}")
+}
+
+parse_grid() {
+  local grid="$1"
+  if [[ "${grid}" =~ ^([0-9]+)$ ]]; then
+    GRID_NX="${BASH_REMATCH[1]}"
+    GRID_NY="${BASH_REMATCH[1]}"
+  elif [[ "${grid}" =~ ^([0-9]+)[xX]([0-9]+)$ ]]; then
+    GRID_NX="${BASH_REMATCH[1]}"
+    GRID_NY="${BASH_REMATCH[2]}"
+  else
+    die "Invalid grid '${grid}'. Expected N or NXxNY, e.g. 256 or 256x256"
+  fi
+  ((GRID_NX > 0 && GRID_NY > 0)) || die "Grid dimensions must be positive: '${grid}'"
 }
 
 # =====================================================
@@ -66,6 +82,9 @@ while [[ $# -gt 0 ]]; do
     --rdc)            RDC="$2"; shift 2 ;;
     --arches)         ARCHES="$2"; shift 2 ;;
     --exec)           EXEC_NAME="$2"; shift 2 ;;
+    --grid)           GRID="$2"; shift 2 ;;
+    --nx)             NX="$2"; shift 2 ;;
+    --ny)             NY="$2"; shift 2 ;;
     --build_root)     BUILD_ROOT="$2"; shift 2 ;;
     --out_root)       OUT_ROOT="$2"; shift 2 ;;
     --reg_order)      REG_ORDER="$2"; shift 2 ;;
@@ -82,6 +101,8 @@ while [[ $# -gt 0 ]]; do
 Usage:
   STENCIL=D2Q9 REAL=float bash compile.sh
   bash compile.sh --stencil D2Q9 --real float --run 1
+  bash compile.sh --grid 256
+  bash compile.sh --grid 256x128
 EOF
       exit 0
       ;;
@@ -97,6 +118,14 @@ done
 
 case "${STENCIL}" in D2Q9|D2V17|D2V37) ;; *) die "Unknown STENCIL='${STENCIL}'" ;; esac
 case "${REAL}" in float|double) ;; *) die "Unknown REAL='${REAL}'" ;; esac
+[[ "${NX}" =~ ^[0-9]+$ ]] || die "NX must be numeric: '${NX}'"
+[[ "${NY}" =~ ^[0-9]+$ ]] || die "NY must be numeric: '${NY}'"
+
+if [[ -n "${GRID}" ]]; then
+  parse_grid "${GRID}"
+else
+  parse_grid "${NX}x${NY}"
+fi
 
 # =====================================================
 # ARCHES
@@ -104,19 +133,19 @@ case "${REAL}" in float|double) ;; *) die "Unknown REAL='${REAL}'" ;; esac
 
 if [[ -z "${ARCHES}" ]]; then ARCHES="$(detect_arches_from_system)"; fi
 if [[ -z "${ARCHES}" ]]; then ARCHES="80 86 89 90"; fi
-mapfile -t GENCODES < <(make_gencodes "${ARCHES}")
+make_gencodes "${ARCHES}"
 
 # =====================================================
 # Build dirs
 # =====================================================
 
-CFG_TAG="${STENCIL}_${REAL}"
+CFG_TAG="${STENCIL}_${REAL}_${GRID_NX}x${GRID_NY}"
 BUILD_DIR="${BUILD_ROOT}/${CFG_TAG}"
 OBJ_DIR="${BUILD_DIR}/obj"
 BIN_PATH="${BUILD_DIR}/${EXEC_NAME}"
 
 echo "ARCHES: ${ARCHES}"
-echo "STENCIL=${STENCIL} REAL=${REAL}"
+echo "STENCIL=${STENCIL} REAL=${REAL} GRID=${GRID_NX}x${GRID_NY}"
 echo "DEBUG=${DEBUG} RDC=${RDC} CLEAN=${CLEAN}"
 echo "BUILD_DIR: ${BUILD_DIR}"
 
@@ -161,6 +190,8 @@ case "${STENCIL}" in
     die "Unknown STENCIL='${STENCIL}'"
     ;;
 esac
+
+NVCCFLAGS+=(-DLBM_NX="${GRID_NX}" -DLBM_NY="${GRID_NY}")
 
 if [[ -n "${RE}" ]]; then
   NVCCFLAGS+=(-DLBM_RE="${RE}")
@@ -231,20 +262,27 @@ echo "✔ Build successful: ${BIN_PATH}"
 
 if [[ "${RUN}" == "1" ]]; then
   if [[ -z "${RUN_ID}" ]]; then
-    RUN_ID="$(date +%Y%m%d_%H%M%S)_${STENCIL}_${REAL}${RE:+_RE${RE}}"
+    CURRENT_RUN_ID="$(date +%Y%m%d_%H%M%S)_${STENCIL}_${REAL}_${GRID_NX}x${GRID_NY}${RE:+_RE${RE}}"
+  else
+    CURRENT_RUN_ID="${RUN_ID}"
   fi
 
-  OUT_DIR="${OUT_ROOT}/${RUN_ID}"
+  OUT_DIR="${OUT_ROOT}/${CURRENT_RUN_ID}"
   mkdir -p "${OUT_DIR}/vtk" "${OUT_DIR}/logs" "${OUT_DIR}/outputs"
 
   echo "[RUN] out_dir=${OUT_DIR}"
+
+  CURRENT_PROGRESS="${PROGRESS}"
+  if [[ "${CURRENT_PROGRESS}" == "1" && ! -t 2 ]]; then
+    CURRENT_PROGRESS=0
+  fi
 
   "${BIN_PATH}" \
     --out "${OUT_DIR}" \
     --io "${IO}" \
     --warmup "${WARMUP}" \
     --verbose "${VERBOSE}" \
-    --progress "${PROGRESS}" \
+    --progress "${CURRENT_PROGRESS}" \
     --progress_hz "${PROGRESS_HZ}" \
     > "${OUT_DIR}/logs/stdout.txt"
 

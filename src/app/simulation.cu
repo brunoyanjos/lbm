@@ -38,6 +38,12 @@ namespace app
             io::debug_domain(tags);
         }
 
+        upload_state_to_host(state);
+        const double ke = io::compute_ke_host_2d(state);
+
+        io::tke_bin_append(ctx.out_dir, 0, ke);
+        io::write_vti(state, cfg, 0, ctx.out_dir);
+
         // ---------------- warmup ----------------
         for (int t = 0; t < ctx.warmup_steps; ++t)
         {
