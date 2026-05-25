@@ -3,6 +3,9 @@
 #include "../core/physics.h"
 #include "../core/simulation_config.h"
 #include "../lbm/stencil_active.cuh"
+#include "lbm/hermite/hermite.cuh"
+#include "lbm/moment/scale_factor.cuh"
+#include "core/indexing.cuh"
 
 #include <fstream>
 #include <cstdint>
@@ -18,15 +21,53 @@ namespace io
     real_t compute_ke_host_2d(const LBMState &state)
     {
         real_t sum = 0.0;
+        int count = 0;
 
-        for (int i = 0; i < int(state.N); ++i)
+        for (int y = 0; y < NY; ++y)
         {
-            const real_t ux = (real_t)state.h_ux[i] / Stencil::as2;
-            const real_t uy = (real_t)state.h_uy[i] / Stencil::as2;
-            sum += 0.5 * (ux * ux + uy * uy);
+            for (int x = 0; x < NX; ++x)
+            {
+                const size_t idx = idxGlobal(x, y);
+
+                real_t rho_E = 0.0;
+                real_t rho_e = 0.0;
+
+                const real_t rho = state.h_rho[idx] + RHO_0;
+                const real_t inv_rho = r::one / rho;
+                const real_t ux = state.h_ux[idx];
+                const real_t uy = state.h_uy[idx];
+                const real_t mxx = state.h_mxx[idx];
+                const real_t mxy = state.h_mxy[idx];
+                const real_t myy = state.h_myy[idx];
+
+                for (int i = 0; i < Stencil::Q; ++i)
+                {
+                    const int cx = Stencil::cx(i);
+                    const int cy = Stencil::cy(i);
+
+                    const real_t fi = Stencil::w(i) * rho *
+                                      (r::one +
+                                       ux * hermite<MomentId::ux>(i) + uy * hermite<MomentId::uy>(i) +
+                                       mxx * hermite<MomentId::mxx>(i) + mxy * hermite<MomentId::mxy>(i) +
+                                       myy * hermite<MomentId::myy>(i));
+
+                    const real_t ci2 = r_cast(cx) * r_cast(cx) + r_cast(cy) * r_cast(cy);
+                    const real_t cix_ux = r_cast(cx) - ux * inv_scale_factor<MomentId::ux>();
+                    const real_t ciy_uy = r_cast(cy) - uy * inv_scale_factor<MomentId::uy>();
+
+                    const real_t ci_u2 = cix_ux * cix_ux + ciy_uy * ciy_uy;
+
+                    rho_E += fi * ci2 * r::half;
+                    rho_e += fi * ci_u2 * r::half;
+                }
+
+                sum += (rho_E - rho_e) * inv_rho;
+
+                count++;
+            }
         }
 
-        real_t norm = state.N * U_LID * U_LID;
+        real_t norm = count * U_LID * U_LID;
         real_t inv_norm = real_t(1) / norm;
 
         sum *= inv_norm;

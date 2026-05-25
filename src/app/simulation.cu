@@ -26,6 +26,12 @@ namespace app
     void run(const CudaConfig &cfg, const RunContext &ctx)
     {
         auto state = lbm_allocate_state();
+
+        if (ctx.restart_from_checkpoint)
+        {
+            // Checkpoint state restore will replace the fresh initialization here.
+        }
+
         init_state(state, cfg);
 
         DomainTags tags = domain_tags_allocate();
@@ -58,6 +64,7 @@ namespace app
 
         const int t_begin = ctx.warmup_steps;
         const int t_end = N_STEPS;
+        const int vti_interval = (ctx.vti_interval > 0) ? ctx.vti_interval : VTI_SAVE_INTERVAL;
 
         // progresso (UI)
         progress::ProgressUI ui;
@@ -83,14 +90,21 @@ namespace app
             state.cur ^= 1;
 
             // IO (pode ter prints internos) -> limpa a barra antes
-            if (ctx.enable_io && (t % SAVE_INTERVAL == 0))
+            const bool save_tke = (t % SAVE_INTERVAL == 0);
+            const bool save_vti = (t % vti_interval == 0);
+
+            if (ctx.enable_io && (save_tke || save_vti))
             {
                 upload_state_to_host(state);
 
-                const double ke = io::compute_ke_host_2d(state);
+                if (save_tke)
+                {
+                    const double ke = io::compute_ke_host_2d(state);
+                    io::tke_bin_append(ctx.out_dir, t, ke);
+                }
 
-                io::tke_bin_append(ctx.out_dir, t, ke);
-                io::write_vti(state, cfg, t, ctx.out_dir);
+                if (save_vti)
+                    io::write_vti(state, cfg, t, ctx.out_dir);
             }
 
             // barra (limite de frequência dentro do ProgressUI)

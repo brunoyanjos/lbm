@@ -23,9 +23,13 @@ set -euo pipefail
 : "${REAL:=float}"
 : "${RUN:=1}"
 : "${RE:=}"
+: "${RESTART:=0}"
+: "${CHECKPOINT_RUN_ID:=}"
+: "${CHECKPOINT_DIR:=}"
 : "${RUN_ID:=}"
 : "${STENCIL:=D2Q9}"
 : "${VERBOSE:=0}"
+: "${VTI_INTERVAL:=0}"
 : "${WARMUP:=100}"
 
 # =====================================================
@@ -76,6 +80,9 @@ while [[ $# -gt 0 ]]; do
     --stencil)        STENCIL="$2"; shift 2 ;;
     --real)           REAL="$2"; shift 2 ;;
     --re)             RE="$2"; shift 2 ;;
+    --restart)        RESTART="$2"; shift 2 ;;
+    --checkpoint_run_id) CHECKPOINT_RUN_ID="$2"; shift 2 ;;
+    --checkpoint_dir) CHECKPOINT_DIR="$2"; shift 2 ;;
     --run)            RUN="$2"; shift 2 ;;
     --clean)          CLEAN="$2"; shift 2 ;;
     --debug)          DEBUG="$2"; shift 2 ;;
@@ -91,6 +98,7 @@ while [[ $# -gt 0 ]]; do
     --run_id)         RUN_ID="$2"; shift 2 ;;
     --io)             IO="$2"; shift 2 ;;
     --warmup)         WARMUP="$2"; shift 2 ;;
+    --vti_interval)   VTI_INTERVAL="$2"; shift 2 ;;
     --verbose)        VERBOSE="$2"; shift 2 ;;
     --progress)       PROGRESS="$2"; shift 2 ;;
     --progress_hz)    PROGRESS_HZ="$2"; shift 2 ;;
@@ -103,6 +111,8 @@ Usage:
   bash compile.sh --stencil D2Q9 --real float --run 1
   bash compile.sh --grid 256
   bash compile.sh --grid 256x128
+  bash compile.sh --vti_interval 10000
+  bash compile.sh --restart 1 --checkpoint_run_id 20260525_120000_D2Q9_float_128x128
 EOF
       exit 0
       ;;
@@ -120,11 +130,22 @@ case "${STENCIL}" in D2Q9|D2V17|D2V37) ;; *) die "Unknown STENCIL='${STENCIL}'" 
 case "${REAL}" in float|double) ;; *) die "Unknown REAL='${REAL}'" ;; esac
 [[ "${NX}" =~ ^[0-9]+$ ]] || die "NX must be numeric: '${NX}'"
 [[ "${NY}" =~ ^[0-9]+$ ]] || die "NY must be numeric: '${NY}'"
+case "${RESTART}" in 0|1) ;; *) die "RESTART must be 0 or 1: '${RESTART}'" ;; esac
 
 if [[ -n "${GRID}" ]]; then
   parse_grid "${GRID}"
 else
   parse_grid "${NX}x${NY}"
+fi
+
+if [[ "${RESTART}" == "1" ]]; then
+  if [[ -z "${CHECKPOINT_RUN_ID}" && -z "${CHECKPOINT_DIR}" ]]; then
+    die "Restart requires --checkpoint_run_id <run_id> or --checkpoint_dir <path>"
+  fi
+
+  if [[ -z "${CHECKPOINT_DIR}" ]]; then
+    CHECKPOINT_DIR="${OUT_ROOT}/${CHECKPOINT_RUN_ID}/checkpoints"
+  fi
 fi
 
 # =====================================================
@@ -146,6 +167,9 @@ BIN_PATH="${BUILD_DIR}/${EXEC_NAME}"
 
 echo "ARCHES: ${ARCHES}"
 echo "STENCIL=${STENCIL} REAL=${REAL} GRID=${GRID_NX}x${GRID_NY}"
+if [[ "${RESTART}" == "1" ]]; then
+  echo "RESTART=1 CHECKPOINT_RUN_ID=${CHECKPOINT_RUN_ID:-<direct-dir>} CHECKPOINT_DIR=${CHECKPOINT_DIR}"
+fi
 echo "DEBUG=${DEBUG} RDC=${RDC} CLEAN=${CLEAN}"
 echo "BUILD_DIR: ${BUILD_DIR}"
 
@@ -262,13 +286,17 @@ echo "✔ Build successful: ${BIN_PATH}"
 
 if [[ "${RUN}" == "1" ]]; then
   if [[ -z "${RUN_ID}" ]]; then
-    CURRENT_RUN_ID="$(date +%Y%m%d_%H%M%S)_${STENCIL}_${REAL}_${GRID_NX}x${GRID_NY}${RE:+_RE${RE}}"
+    if [[ "${RESTART}" == "1" ]]; then
+      CURRENT_RUN_ID="$(date +%Y%m%d_%H%M%S)_restart_${CHECKPOINT_RUN_ID:-checkpoint}"
+    else
+      CURRENT_RUN_ID="$(date +%Y%m%d_%H%M%S)_${STENCIL}_${REAL}_${GRID_NX}x${GRID_NY}${RE:+_RE${RE}}"
+    fi
   else
     CURRENT_RUN_ID="${RUN_ID}"
   fi
 
   OUT_DIR="${OUT_ROOT}/${CURRENT_RUN_ID}"
-  mkdir -p "${OUT_DIR}/vtk" "${OUT_DIR}/logs" "${OUT_DIR}/outputs"
+  mkdir -p "${OUT_DIR}/vtk" "${OUT_DIR}/logs" "${OUT_DIR}/outputs" "${OUT_DIR}/checkpoints"
 
   echo "[RUN] out_dir=${OUT_DIR}"
 
@@ -279,8 +307,12 @@ if [[ "${RUN}" == "1" ]]; then
 
   "${BIN_PATH}" \
     --out "${OUT_DIR}" \
+    --restart "${RESTART}" \
+    --checkpoint_run_id "${CHECKPOINT_RUN_ID}" \
+    --checkpoint_dir "${CHECKPOINT_DIR}" \
     --io "${IO}" \
     --warmup "${WARMUP}" \
+    --vti_interval "${VTI_INTERVAL}" \
     --verbose "${VERBOSE}" \
     --progress "${CURRENT_PROGRESS}" \
     --progress_hz "${PROGRESS_HZ}" \
