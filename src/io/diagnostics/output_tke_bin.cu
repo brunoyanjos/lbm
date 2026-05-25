@@ -9,6 +9,8 @@
 
 #include <fstream>
 #include <cstdint>
+#include <filesystem>
+#include <iostream>
 #include <string>
 
 namespace io
@@ -16,6 +18,22 @@ namespace io
     static std::string tke_bin_path(const std::string &out_dir)
     {
         return out_dir + "/outputs/tke.bin";
+    }
+
+    static std::filesystem::path source_tke_path_from_checkpoint(const std::string &checkpoint_path_or_dir)
+    {
+        namespace fs = std::filesystem;
+
+        fs::path path(checkpoint_path_or_dir);
+        fs::path dir = fs::is_regular_file(path) ? path.parent_path() : path;
+
+        if (dir.filename() == "checkpoints")
+            return dir.parent_path() / "outputs" / "tke.bin";
+
+        if (fs::exists(dir / "outputs" / "tke.bin"))
+            return dir / "outputs" / "tke.bin";
+
+        return dir.parent_path() / "outputs" / "tke.bin";
     }
 
     real_t compute_ke_host_2d(const LBMState &state)
@@ -84,5 +102,54 @@ namespace io
 
         f.write(reinterpret_cast<const char *>(&tstar), sizeof(tstar));
         f.write(reinterpret_cast<const char *>(&ke), sizeof(ke));
+    }
+
+    void seed_tke_history_from_checkpoint(const std::string &checkpoint_path_or_dir,
+                                          const std::string &out_dir,
+                                          int checkpoint_step)
+    {
+        namespace fs = std::filesystem;
+
+        const fs::path src_path = source_tke_path_from_checkpoint(checkpoint_path_or_dir);
+        if (!fs::exists(src_path))
+        {
+            std::cerr << "[CHECKPOINT] previous TKE history not found: " << src_path.string() << "\n";
+            return;
+        }
+
+        const fs::path dst_path = fs::path(out_dir) / "outputs" / "tke.bin";
+        fs::create_directories(dst_path.parent_path());
+
+        if (fs::exists(dst_path) && fs::equivalent(src_path, dst_path))
+            return;
+
+        std::ifstream src(src_path, std::ios::binary);
+        std::ofstream dst(dst_path, std::ios::binary | std::ios::trunc);
+        if (!src.is_open() || !dst.is_open())
+        {
+            std::cerr << "[CHECKPOINT] could not seed TKE history from: " << src_path.string() << "\n";
+            return;
+        }
+
+        const int64_t checkpoint_tstar = int64_t(checkpoint_step) / int64_t(SAVE_INTERVAL);
+        int64_t tstar = 0;
+        double ke = 0.0;
+        int64_t copied = 0;
+
+        while (src.read(reinterpret_cast<char *>(&tstar), sizeof(tstar)))
+        {
+            if (!src.read(reinterpret_cast<char *>(&ke), sizeof(ke)))
+                break;
+
+            if (tstar > checkpoint_tstar)
+                break;
+
+            dst.write(reinterpret_cast<const char *>(&tstar), sizeof(tstar));
+            dst.write(reinterpret_cast<const char *>(&ke), sizeof(ke));
+            ++copied;
+        }
+
+        std::cout << "[CHECKPOINT] seeded " << copied
+                  << " TKE records from " << src_path.string() << "\n";
     }
 }

@@ -21,19 +21,31 @@
 
 #include <chrono>
 #include <iostream>
+#include <algorithm>
 
 namespace app
 {
     void run(const CudaConfig &cfg, const RunContext &ctx)
     {
         auto state = lbm_allocate_state();
+        std::int64_t checkpoint_step = -1;
+        int current_step = 0;
+        int last_checkpoint_step = -1;
 
         if (ctx.restart_from_checkpoint)
         {
-            // Checkpoint state restore will replace the fresh initialization here.
-        }
+            const io::CheckpointConfig checkpoint_cfg = io::read_checkpoint_current(state, ctx.checkpoint_dir);
+            checkpoint_step = checkpoint_cfg.step;
+            current_step = static_cast<int>(std::min<std::int64_t>(checkpoint_step, N_STEPS));
 
-        init_state(state, cfg);
+            if (ctx.enable_io)
+                io::seed_tke_history_from_checkpoint(ctx.checkpoint_dir, ctx.out_dir,
+                                                     static_cast<int>(checkpoint_step));
+        }
+        else
+        {
+            init_state(state, cfg);
+        }
 
         DomainTags tags = domain_tags_allocate();
         build_tags(tags);
@@ -45,17 +57,23 @@ namespace app
             io::debug_domain(tags);
         }
 
-        upload_state_to_host(state);
-        const double ke = io::compute_ke_host_2d(state);
-
-        io::tke_bin_append(ctx.out_dir, 0, ke);
-        io::write_vti(state, cfg, 0, ctx.out_dir);
-
         // ---------------- warmup ----------------
-        for (int t = 0; t < ctx.warmup_steps; ++t)
+        if (!ctx.restart_from_checkpoint && ctx.enable_io)
+        {
+            upload_state_to_host(state);
+            const double ke = io::compute_ke_host_2d(state);
+
+            io::tke_bin_append(ctx.out_dir, current_step, ke);
+            io::write_vti(state, cfg, current_step, ctx.out_dir);
+        }
+
+        const int t_end = N_STEPS;
+        const int warmup_end = std::min(t_end, current_step + std::max(0, ctx.warmup_steps));
+        while (current_step < warmup_end)
         {
             lbm_mom_step(state, cfg, tags);
             state.cur ^= 1;
+            ++current_step;
         }
         CUDA_CHECK(cudaDeviceSynchronize());
 
@@ -63,8 +81,7 @@ namespace app
         using clock = std::chrono::steady_clock;
         const auto wall0 = clock::now();
 
-        const int t_begin = ctx.warmup_steps;
-        const int t_end = N_STEPS;
+        const int t_begin = current_step;
         const int vti_interval = (ctx.vti_interval > 0) ? ctx.vti_interval : VTI_SAVE_INTERVAL;
 
         // progresso (UI)
@@ -84,15 +101,15 @@ namespace app
             CUDA_CHECK(cudaEventRecord(ev_prog0));
         }
 
-        // ---------------- main loop (mede) ----------------
-        for (int t = t_begin; t < t_end; ++t)
+        // ---------------- main loop ----------------
+        while (current_step < t_end)
         {
             lbm_mom_step(state, cfg, tags);
             state.cur ^= 1;
+            ++current_step;
 
-            // IO (pode ter prints internos) -> limpa a barra antes
-            const bool save_tke = (t % SAVE_INTERVAL == 0);
-            const bool save_vti = (t % vti_interval == 0);
+            const bool save_tke = (current_step % SAVE_INTERVAL == 0);
+            const bool save_vti = (current_step % vti_interval == 0);
 
             if (ctx.enable_io && (save_tke || save_vti))
             {
@@ -101,18 +118,18 @@ namespace app
                 if (save_tke)
                 {
                     const double ke = io::compute_ke_host_2d(state);
-                    io::tke_bin_append(ctx.out_dir, t, ke);
+                    io::tke_bin_append(ctx.out_dir, current_step, ke);
                 }
 
                 if (save_vti)
                 {
-                    io::write_vti(state, cfg, t, ctx.out_dir);
-                    io::write_checkpoint_current(state, t, ctx.out_dir);
+                    io::write_vti(state, cfg, current_step, ctx.out_dir);
+                    io::write_checkpoint_current(state, current_step, ctx.out_dir);
+                    last_checkpoint_step = current_step;
                 }
             }
 
-            // barra (limite de frequência dentro do ProgressUI)
-            if (ctx.show_progress && (ui.should_print() || t == t_end - 1))
+            if (ctx.show_progress && (ui.should_print() || current_step == t_end))
             {
                 const auto now = clock::now();
 
@@ -125,17 +142,19 @@ namespace app
 
                 const double wall_elapsed_s = std::chrono::duration<double>(now - wall0).count();
 
-                const int done_steps = (t - t_begin + 1);
+                const int done_steps = (current_step - t_begin);
                 const double updates = double(NX) * double(NY) * double(done_steps);
                 const double mlups_partial = (gpu_elapsed_s > 0.0) ? (updates / gpu_elapsed_s / 1e6) : 0.0;
 
-                ui.print(t, wall_elapsed_s, gpu_elapsed_s, mlups_partial);
+                ui.print(current_step, wall_elapsed_s, gpu_elapsed_s, mlups_partial);
             }
         }
 
         if (ctx.enable_io)
         {
             upload_state_to_host(state);
+            if (last_checkpoint_step != t_end)
+                io::write_checkpoint_current(state, t_end, ctx.out_dir);
             io::write_centerline_profiles(state, t_end * U_LID / NX, ctx.out_dir);
         }
 
@@ -147,11 +166,11 @@ namespace app
         BenchmarkResult r;
         r.gpu_seconds = gpu_s;
         r.wall_seconds = wall_s;
-        r.measured_steps = (N_STEPS - ctx.warmup_steps);
+        r.measured_steps = (t_end - t_begin);
 
         const double updates = double(NX) * double(NY) * double(r.measured_steps);
-        r.mlups_gpu = updates / r.gpu_seconds / 1e6;
-        r.mlups_wall = updates / r.wall_seconds / 1e6;
+        r.mlups_gpu = (r.gpu_seconds > 0.0) ? (updates / r.gpu_seconds / 1e6) : 0.0;
+        r.mlups_wall = (r.wall_seconds > 0.0) ? (updates / r.wall_seconds / 1e6) : 0.0;
 
         io::write_performance(ctx.out_dir, cfg, r);
 
