@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../lbm/state/lbm_state.cuh"
-#include "../core/types.cuh"
+#include "../../lbm/state/lbm_state.cuh"
+#include "../../core/types.cuh"
 
 #include <string>
 #include <cstdint>

@@ -1,8 +1,8 @@
 #include "output_tke_bin.cuh"
 
-#include "../core/physics.h"
-#include "../core/simulation_config.h"
-#include "../lbm/stencil_active.cuh"
+#include "../../core/physics.h"
+#include "../../core/simulation_config.h"
+#include "../../lbm/stencil_active.cuh"
 #include "lbm/hermite/hermite.cuh"
 #include "lbm/moment/scale_factor.cuh"
 #include "core/indexing.cuh"

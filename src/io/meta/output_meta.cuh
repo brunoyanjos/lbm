@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
-#include "../app/cuda_config.cuh"
-#include "../app/benchmark.cuh"
+#include "../../app/cuda_config.cuh"
+#include "../../app/benchmark.cuh"
 
 namespace io
 {

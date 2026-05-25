@@ -1,5 +1,5 @@
 #pragma once
-#include "../lbm/domain/domain_tags.cuh"
+#include "../../lbm/domain/domain_tags.cuh"
 
 namespace io
 {

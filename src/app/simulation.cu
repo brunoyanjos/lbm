@@ -3,11 +3,11 @@
 #include "benchmark.cuh"
 #include "progress.cuh"
 
-#include "../io/output_meta.cuh"
-#include "../io/output_vtk.cuh"
-#include "../io/debug_domain.cuh"
-#include "../io/output_tke_bin.cuh"
-#include "../io/output_centerline_bin.cuh"
+#include "../io/meta/output_meta.cuh"
+#include "../io/vtk/output_vtk.cuh"
+#include "../io/debug/debug_domain.cuh"
+#include "../io/diagnostics/output_tke_bin.cuh"
+#include "../io/diagnostics/output_centerline_bin.cuh"
 
 #include "../lbm/state/lbm_state.cuh"
 #include "../lbm/lbm_init_state.cuh"

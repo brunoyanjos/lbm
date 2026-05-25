@@ -1,6 +1,6 @@
 #pragma once
-#include "../lbm/state/lbm_state.cuh"
-#include "../core/geometry.h"
+#include "../../lbm/state/lbm_state.cuh"
+#include "../../core/geometry.h"
 #include <string>
 
 namespace io

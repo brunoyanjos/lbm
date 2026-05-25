@@ -1,9 +1,9 @@
 #include "output_vtk.cuh"
 
-#include "../core/geometry.h"
-#include "../core/physics.h"
-#include "../core/indexing.cuh"
-#include "../lbm/stencil_active.cuh"
+#include "../../core/geometry.h"
+#include "../../core/physics.h"
+#include "../../core/indexing.cuh"
+#include "../../lbm/stencil_active.cuh"
 
 #include <filesystem>
 #include <fstream>

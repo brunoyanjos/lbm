@@ -7,6 +7,7 @@
 #include "app/simulation.cuh"
 #include "app/simulation_summary.cuh"
 #include "app/run_context.cuh"
+#include "io/checkpoint/checkpoint_config.cuh"
 
 static std::string get_arg(int argc, char **argv, const std::string &key, const std::string &def)
 {

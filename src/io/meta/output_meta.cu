@@ -2,8 +2,8 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
-#include "../core/physics.h"
-#include "../core/geometry.h"
+#include "../../core/physics.h"
+#include "../../core/geometry.h"
 
 namespace io
 {
