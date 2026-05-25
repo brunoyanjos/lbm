@@ -26,8 +26,15 @@ set -euo pipefail
 : "${RESTART:=0}"
 : "${CHECKPOINT_RUN_ID:=}"
 : "${CHECKPOINT_DIR:=}"
+: "${CHECKPOINT_T_STAR:=}"
+: "${CHECKPOINT_FILE:=}"
+: "${CHECKPOINT_N_STEPS:=}"
+: "${CHECKPOINT_SAVE_INTERVAL:=}"
+: "${CHECKPOINT_VTI_SAVE_INTERVAL:=}"
+: "${CHECKPOINT_STEP:=}"
 : "${RUN_ID:=}"
 : "${STENCIL:=D2Q9}"
+: "${T_STAR_END:=1000}"
 : "${VERBOSE:=0}"
 : "${VTI_INTERVAL:=0}"
 : "${WARMUP:=100}"
@@ -71,6 +78,123 @@ parse_grid() {
   ((GRID_NX > 0 && GRID_NY > 0)) || die "Grid dimensions must be positive: '${grid}'"
 }
 
+import_checkpoint_build_config() {
+  local checkpoint_path="$1"
+  local checkpoint_t_star="$2"
+  local parsed=()
+
+  mapfile -t parsed < <(python3 - "${checkpoint_path}" "${checkpoint_t_star}" <<'PY'
+import pathlib
+import struct
+import sys
+
+path = pathlib.Path(sys.argv[1])
+requested_t_star = sys.argv[2]
+
+fmt = "<8sIII" + ("i" * 7) + ("q" * 7) + ("d" * 4) + "I16s"
+
+def read_header(candidate):
+    with candidate.open("rb") as f:
+        data = f.read(struct.calcsize(fmt))
+
+    if len(data) != struct.calcsize(fmt):
+        raise SystemExit(f"Could not read checkpoint header: {candidate}")
+
+    values = struct.unpack(fmt, data)
+    magic = values[0]
+    if magic != b"LBMCHK1\0":
+        raise SystemExit(f"Invalid checkpoint magic in: {candidate}")
+
+    version, header_bytes, endian = values[1:4]
+    if version != 1:
+        raise SystemExit(f"Unsupported checkpoint version {version} in: {candidate}")
+    if endian != 0x01020304:
+        raise SystemExit(f"Unsupported checkpoint endian marker in: {candidate}")
+
+    return values
+
+if path.is_dir():
+    candidates = sorted(path.glob("checkpoint*.bin"))
+    if not candidates:
+        raise SystemExit(f"No checkpoint*.bin files found in: {path}")
+
+    if requested_t_star:
+        requested = int(requested_t_star)
+        selected = None
+        selected_values = None
+        for candidate in candidates:
+            values = read_header(candidate)
+            step, save_interval = values[14], values[16]
+            t_star = step // save_interval
+            if t_star == requested:
+                selected = candidate
+                selected_values = values
+                break
+
+        if selected is None:
+            raise SystemExit(f"No checkpoint found for t_star={requested} in: {path}")
+
+        path = selected
+        values = selected_values
+    else:
+        path = candidates[-1]
+        values = read_header(path)
+elif path.is_file():
+    values = read_header(path)
+else:
+    raise SystemExit(f"Checkpoint path does not exist: {path}")
+
+nx, ny, q, real_bytes, real_is_double, _cur, _field_count = values[4:11]
+node_count, field_bytes, payload_bytes, step, n_steps, save_interval, vti_save_interval = values[11:18]
+re, _u_lid, _tau, _omega = values[18:22]
+stencil_name = values[23].split(b"\0", 1)[0].decode("ascii")
+checkpoint_t_star = step // save_interval
+
+real = "double" if real_is_double else "float"
+
+print(f"CHECKPOINT_FILE={path}")
+print(f"STENCIL={stencil_name}")
+print(f"REAL={real}")
+print(f"NX={nx}")
+print(f"NY={ny}")
+print(f"RE={re:.17g}")
+print(f"CHECKPOINT_N_STEPS={n_steps}")
+print(f"CHECKPOINT_SAVE_INTERVAL={save_interval}")
+print(f"CHECKPOINT_VTI_SAVE_INTERVAL={vti_save_interval}")
+print(f"CHECKPOINT_STEP={step}")
+print(f"CHECKPOINT_T_STAR={checkpoint_t_star}")
+print(f"CHECKPOINT_Q={q}")
+print(f"CHECKPOINT_REAL_BYTES={real_bytes}")
+print(f"CHECKPOINT_NODE_COUNT={node_count}")
+print(f"CHECKPOINT_FIELD_BYTES={field_bytes}")
+print(f"CHECKPOINT_PAYLOAD_BYTES={payload_bytes}")
+PY
+  )
+
+  for kv in "${parsed[@]}"; do
+    local key="${kv%%=*}"
+    local value="${kv#*=}"
+    case "${key}" in
+      CHECKPOINT_FILE) CHECKPOINT_FILE="${value}" ;;
+      STENCIL) STENCIL="${value}" ;;
+      REAL) REAL="${value}" ;;
+      NX) NX="${value}" ;;
+      NY) NY="${value}" ;;
+      RE) RE="${value}" ;;
+      CHECKPOINT_N_STEPS) CHECKPOINT_N_STEPS="${value}" ;;
+      CHECKPOINT_SAVE_INTERVAL) CHECKPOINT_SAVE_INTERVAL="${value}" ;;
+      CHECKPOINT_VTI_SAVE_INTERVAL) CHECKPOINT_VTI_SAVE_INTERVAL="${value}" ;;
+      CHECKPOINT_STEP) CHECKPOINT_STEP="${value}" ;;
+      CHECKPOINT_T_STAR) CHECKPOINT_T_STAR="${value}" ;;
+      CHECKPOINT_Q) CHECKPOINT_Q="${value}" ;;
+      CHECKPOINT_REAL_BYTES) CHECKPOINT_REAL_BYTES="${value}" ;;
+      CHECKPOINT_NODE_COUNT) CHECKPOINT_NODE_COUNT="${value}" ;;
+      CHECKPOINT_FIELD_BYTES) CHECKPOINT_FIELD_BYTES="${value}" ;;
+      CHECKPOINT_PAYLOAD_BYTES) CHECKPOINT_PAYLOAD_BYTES="${value}" ;;
+    esac
+  done
+}
+
 # =====================================================
 # Parse CLI args
 # =====================================================
@@ -83,6 +207,7 @@ while [[ $# -gt 0 ]]; do
     --restart)        RESTART="$2"; shift 2 ;;
     --checkpoint_run_id) CHECKPOINT_RUN_ID="$2"; shift 2 ;;
     --checkpoint_dir) CHECKPOINT_DIR="$2"; shift 2 ;;
+    --checkpoint_t_star) CHECKPOINT_T_STAR="$2"; shift 2 ;;
     --run)            RUN="$2"; shift 2 ;;
     --clean)          CLEAN="$2"; shift 2 ;;
     --debug)          DEBUG="$2"; shift 2 ;;
@@ -98,6 +223,7 @@ while [[ $# -gt 0 ]]; do
     --run_id)         RUN_ID="$2"; shift 2 ;;
     --io)             IO="$2"; shift 2 ;;
     --warmup)         WARMUP="$2"; shift 2 ;;
+    --t_star_end)     T_STAR_END="$2"; shift 2 ;;
     --vti_interval)   VTI_INTERVAL="$2"; shift 2 ;;
     --verbose)        VERBOSE="$2"; shift 2 ;;
     --progress)       PROGRESS="$2"; shift 2 ;;
@@ -111,8 +237,9 @@ Usage:
   bash compile.sh --stencil D2Q9 --real float --run 1
   bash compile.sh --grid 256
   bash compile.sh --grid 256x128
+  bash compile.sh --t_star_end 1000
   bash compile.sh --vti_interval 10000
-  bash compile.sh --restart 1 --checkpoint_run_id 20260525_120000_D2Q9_float_128x128
+  bash compile.sh --restart 1 --checkpoint_run_id 20260525_120000_D2Q9_float_128x128 --checkpoint_t_star 900 --t_star_end 2000
 EOF
       exit 0
       ;;
@@ -126,16 +253,10 @@ done
 # Validate
 # =====================================================
 
-case "${STENCIL}" in D2Q9|D2V17|D2V37) ;; *) die "Unknown STENCIL='${STENCIL}'" ;; esac
-case "${REAL}" in float|double) ;; *) die "Unknown REAL='${REAL}'" ;; esac
-[[ "${NX}" =~ ^[0-9]+$ ]] || die "NX must be numeric: '${NX}'"
-[[ "${NY}" =~ ^[0-9]+$ ]] || die "NY must be numeric: '${NY}'"
 case "${RESTART}" in 0|1) ;; *) die "RESTART must be 0 or 1: '${RESTART}'" ;; esac
-
-if [[ -n "${GRID}" ]]; then
-  parse_grid "${GRID}"
-else
-  parse_grid "${NX}x${NY}"
+[[ "${T_STAR_END}" =~ ^[0-9]+$ ]] || die "T_STAR_END must be numeric: '${T_STAR_END}'"
+if [[ -n "${CHECKPOINT_T_STAR}" ]]; then
+  [[ "${CHECKPOINT_T_STAR}" =~ ^[0-9]+$ ]] || die "CHECKPOINT_T_STAR must be numeric: '${CHECKPOINT_T_STAR}'"
 fi
 
 if [[ "${RESTART}" == "1" ]]; then
@@ -145,6 +266,28 @@ if [[ "${RESTART}" == "1" ]]; then
 
   if [[ -z "${CHECKPOINT_DIR}" ]]; then
     CHECKPOINT_DIR="${OUT_ROOT}/${CHECKPOINT_RUN_ID}/checkpoints"
+  fi
+
+  import_checkpoint_build_config "${CHECKPOINT_DIR}" "${CHECKPOINT_T_STAR}"
+  [[ -n "${CHECKPOINT_FILE}" ]] || die "Could not import checkpoint build config from '${CHECKPOINT_DIR}'"
+  GRID="${NX}x${NY}"
+fi
+
+case "${STENCIL}" in D2Q9|D2V17|D2V37) ;; *) die "Unknown STENCIL='${STENCIL}'" ;; esac
+case "${REAL}" in float|double) ;; *) die "Unknown REAL='${REAL}'" ;; esac
+[[ "${NX}" =~ ^[0-9]+$ ]] || die "NX must be numeric: '${NX}'"
+[[ "${NY}" =~ ^[0-9]+$ ]] || die "NY must be numeric: '${NY}'"
+
+if [[ -n "${GRID}" ]]; then
+  parse_grid "${GRID}"
+else
+  parse_grid "${NX}x${NY}"
+fi
+
+if [[ "${RESTART}" == "1" ]]; then
+  CHECKPOINT_N_STEPS=$((T_STAR_END * CHECKPOINT_SAVE_INTERVAL))
+  if (( CHECKPOINT_N_STEPS <= CHECKPOINT_STEP )); then
+    die "t_star_end=${T_STAR_END} must be greater than checkpoint_t_star=${CHECKPOINT_T_STAR}"
   fi
 fi
 
@@ -166,9 +309,11 @@ OBJ_DIR="${BUILD_DIR}/obj"
 BIN_PATH="${BUILD_DIR}/${EXEC_NAME}"
 
 echo "ARCHES: ${ARCHES}"
-echo "STENCIL=${STENCIL} REAL=${REAL} GRID=${GRID_NX}x${GRID_NY}"
+echo "STENCIL=${STENCIL} REAL=${REAL} GRID=${GRID_NX}x${GRID_NY} T_STAR_END=${T_STAR_END}"
 if [[ "${RESTART}" == "1" ]]; then
   echo "RESTART=1 CHECKPOINT_RUN_ID=${CHECKPOINT_RUN_ID:-<direct-dir>} CHECKPOINT_DIR=${CHECKPOINT_DIR}"
+  echo "CHECKPOINT_FILE=${CHECKPOINT_FILE} STEP=${CHECKPOINT_STEP} T_STAR=${CHECKPOINT_T_STAR}"
+  echo "CHECKPOINT_COMPILE RE=${RE} N_STEPS=${CHECKPOINT_N_STEPS} SAVE_INTERVAL=${CHECKPOINT_SAVE_INTERVAL} VTI_SAVE_INTERVAL=${CHECKPOINT_VTI_SAVE_INTERVAL}"
 fi
 echo "DEBUG=${DEBUG} RDC=${RDC} CLEAN=${CLEAN}"
 echo "BUILD_DIR: ${BUILD_DIR}"
@@ -219,6 +364,20 @@ NVCCFLAGS+=(-DLBM_NX="${GRID_NX}" -DLBM_NY="${GRID_NY}")
 
 if [[ -n "${RE}" ]]; then
   NVCCFLAGS+=(-DLBM_RE="${RE}")
+fi
+
+NVCCFLAGS+=(-DLBM_T_STAR_END="${T_STAR_END}")
+
+if [[ -n "${CHECKPOINT_N_STEPS}" ]]; then
+  NVCCFLAGS+=(-DLBM_N_STEPS="${CHECKPOINT_N_STEPS}")
+fi
+
+if [[ -n "${CHECKPOINT_SAVE_INTERVAL}" ]]; then
+  NVCCFLAGS+=(-DLBM_SAVE_INTERVAL="${CHECKPOINT_SAVE_INTERVAL}")
+fi
+
+if [[ -n "${CHECKPOINT_VTI_SAVE_INTERVAL}" ]]; then
+  NVCCFLAGS+=(-DLBM_VTI_SAVE_INTERVAL="${CHECKPOINT_VTI_SAVE_INTERVAL}")
 fi
 
 if [[ "${REAL}" == "double" ]]; then
@@ -309,7 +468,7 @@ if [[ "${RUN}" == "1" ]]; then
     --out "${OUT_DIR}" \
     --restart "${RESTART}" \
     --checkpoint_run_id "${CHECKPOINT_RUN_ID}" \
-    --checkpoint_dir "${CHECKPOINT_DIR}" \
+    --checkpoint_dir "${CHECKPOINT_FILE:-${CHECKPOINT_DIR}}" \
     --io "${IO}" \
     --warmup "${WARMUP}" \
     --vti_interval "${VTI_INTERVAL}" \

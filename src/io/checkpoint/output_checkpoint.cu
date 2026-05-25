@@ -42,7 +42,7 @@ namespace io
 
                 const fs::path candidate = entry.path();
                 const std::string name = candidate.filename().string();
-                if (name.rfind("checkpoint_", 0) != 0 || candidate.extension() != ".bin")
+                if (name.rfind("checkpoint", 0) != 0 || candidate.extension() != ".bin")
                     continue;
 
                 if (latest.empty() || candidate.filename().string() > latest.filename().string())
@@ -50,7 +50,7 @@ namespace io
             }
 
             if (latest.empty())
-                throw std::runtime_error("No checkpoint_*.bin files found in: " + path.string());
+                throw std::runtime_error("No checkpoint*.bin files found in: " + path.string());
 
             return latest;
         }
@@ -90,8 +90,10 @@ namespace io
         fs::path checkpoint_dir = fs::path(out_dir) / "checkpoints";
         fs::create_directories(checkpoint_dir);
 
+        const int t_star = step / SAVE_INTERVAL;
         std::ostringstream filename;
-        filename << "checkpoint_" << std::setw(9) << std::setfill('0') << step << ".bin";
+        filename << "checkpoint_tstar_" << std::setw(7) << std::setfill('0') << t_star
+                 << "_step_" << std::setw(9) << std::setfill('0') << step << ".bin";
 
         const fs::path filepath = checkpoint_dir / filename.str();
         std::ofstream file(filepath, std::ios::binary);
