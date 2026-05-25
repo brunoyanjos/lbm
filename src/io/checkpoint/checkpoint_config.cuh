@@ -32,7 +32,11 @@ namespace io
         std::int32_t real_bytes;
         std::int32_t real_is_double;
         std::int32_t cur;
+        std::int32_t field_count;
 
+        std::int64_t node_count;
+        std::int64_t field_bytes;
+        std::int64_t payload_bytes;
         std::int64_t step;
         std::int64_t n_steps;
         std::int64_t save_interval;
@@ -86,7 +90,11 @@ namespace io
         cfg.real_bytes = sizeof(real_t);
         cfg.real_is_double = (sizeof(real_t) == sizeof(double)) ? 1 : 0;
         cfg.cur = cur;
+        cfg.field_count = 6;
 
+        cfg.node_count = static_cast<std::int64_t>(NX) * static_cast<std::int64_t>(NY);
+        cfg.field_bytes = cfg.node_count * static_cast<std::int64_t>(sizeof(real_t));
+        cfg.payload_bytes = cfg.field_count * cfg.field_bytes;
         cfg.step = step;
         cfg.n_steps = N_STEPS;
         cfg.save_interval = SAVE_INTERVAL;

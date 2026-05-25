@@ -8,6 +8,7 @@
 #include "../io/debug/debug_domain.cuh"
 #include "../io/diagnostics/output_tke_bin.cuh"
 #include "../io/diagnostics/output_centerline_bin.cuh"
+#include "../io/checkpoint/output_checkpoint.cuh"
 
 #include "../lbm/state/lbm_state.cuh"
 #include "../lbm/lbm_init_state.cuh"
@@ -104,7 +105,10 @@ namespace app
                 }
 
                 if (save_vti)
+                {
                     io::write_vti(state, cfg, t, ctx.out_dir);
+                    io::write_checkpoint_current(state, t, ctx.out_dir);
+                }
             }
 
             // barra (limite de frequência dentro do ProgressUI)
