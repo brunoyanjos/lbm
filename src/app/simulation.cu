@@ -28,6 +28,7 @@ namespace app
     void run(const CudaConfig &cfg, const RunContext &ctx)
     {
         auto state = lbm_allocate_state();
+        io::FlowAverages flow_averages = io::make_flow_averages(state.N);
         std::int64_t checkpoint_step = -1;
         int current_step = 0;
         int last_checkpoint_step = -1;
@@ -39,8 +40,12 @@ namespace app
             current_step = static_cast<int>(std::min<std::int64_t>(checkpoint_step, N_STEPS));
 
             if (ctx.enable_io)
+            {
                 io::seed_tke_history_from_checkpoint(ctx.checkpoint_dir, ctx.out_dir,
                                                      static_cast<int>(checkpoint_step));
+                io::seed_flow_averages_from_checkpoint(ctx.checkpoint_dir, flow_averages,
+                                                       static_cast<int>(checkpoint_step));
+            }
         }
         else
         {
@@ -61,7 +66,7 @@ namespace app
         if (!ctx.restart_from_checkpoint && ctx.enable_io)
         {
             upload_state_to_host(state);
-            const double ke = io::compute_ke_host_2d(state);
+            const double ke = io::compute_ke_and_accumulate_flow_averages_host_2d(state, flow_averages);
 
             io::tke_bin_append(ctx.out_dir, current_step, ke);
             io::write_vti(state, cfg, current_step, ctx.out_dir);
@@ -117,7 +122,8 @@ namespace app
 
                 if (save_tke)
                 {
-                    const double ke = io::compute_ke_host_2d(state);
+                    const double ke = io::compute_ke_and_accumulate_flow_averages_host_2d(state,
+                                                                                          flow_averages);
                     io::tke_bin_append(ctx.out_dir, current_step, ke);
                 }
 
@@ -125,6 +131,7 @@ namespace app
                 {
                     io::write_vti(state, cfg, current_step, ctx.out_dir);
                     io::write_checkpoint_current(state, current_step, ctx.out_dir);
+                    io::write_flow_averages_checkpoint(flow_averages, current_step, ctx.out_dir);
                     last_checkpoint_step = current_step;
                 }
             }
@@ -154,7 +161,11 @@ namespace app
         {
             upload_state_to_host(state);
             if (last_checkpoint_step != t_end)
+            {
                 io::write_checkpoint_current(state, t_end, ctx.out_dir);
+                io::write_flow_averages_checkpoint(flow_averages, t_end, ctx.out_dir);
+            }
+            io::write_flow_averages(flow_averages, t_end, ctx.out_dir);
             io::write_centerline_profiles(state, t_end * U_LID / NX, ctx.out_dir);
         }
 
