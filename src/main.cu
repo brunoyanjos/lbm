@@ -40,7 +40,7 @@ static void configure_simulation_from_checkpoint(app::RunContext &ctx)
     std::cout << "[CHECKPOINT] restart requested\n"
               << "[CHECKPOINT] run_id=" << ctx.checkpoint_run_id << "\n"
               << "[CHECKPOINT] dir=" << ctx.checkpoint_dir << "\n"
-              << "[CHECKPOINT] metadata/state loading will be wired here.\n";
+              << "[CHECKPOINT] state will be loaded before time stepping.\n";
 }
 
 int main(int argc, char **argv)
@@ -72,14 +72,7 @@ int main(int argc, char **argv)
     configure_simulation_from_checkpoint(ctx);
 
     CudaConfig cfg = make_config();
-    if (ctx.restart_from_checkpoint)
-    {
-        std::cout << "[CHECKPOINT] simulation summary skipped until checkpoint metadata is loaded.\n";
-    }
-    else
-    {
-        print_simulation_summary(cfg, prop);
-    }
+    print_simulation_summary(cfg, prop);
 
     app::run(cfg, ctx);
     return 0;
