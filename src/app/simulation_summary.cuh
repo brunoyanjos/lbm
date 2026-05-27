@@ -25,6 +25,8 @@ inline void print_simulation_summary(const CudaConfig &cfg,
     std::cout << "D2Q9\n";
 #elif defined(LBM_STENCIL_D2V17)
     std::cout << "D2V17\n";
+#elif defined(LBM_STENCIL_D2V37)
+    std::cout << "D2V37\n";
 #else
     std::cout << "UNKNOWN\n";
 #endif

@@ -1,10 +1,13 @@
 #include "lbm_init_state.cuh"
 #include <cuda_runtime.h>
 
-#include "../core/geometry.h"
-#include "../core/physics.h"
-#include "../core/indexing.cuh"
-#include "../core/cuda_utils.cuh"
+#include "core/geometry.h"
+#include "core/physics.h"
+#include "core/indexing.cuh"
+#include "core/cuda_utils.cuh"
+
+#include "lbm/hermite/hermite.cuh"
+#include "lbm/moment/scale_factor.cuh"
 
 #include "lbm_equilibrium.cuh"
 #include "stencil_active.cuh"
@@ -17,8 +20,8 @@ __global__ void init_on_device(LBMState S)
         return;
 
     const real_t rho = RHO_0;
-    const real_t ux = real_t(0);
-    const real_t uy = real_t(0);
+    const real_t ux = r::zero;
+    const real_t uy = r::zero;
 
     real_t pop[Stencil::Q];
     equilibrium(pop, rho, ux, uy);
@@ -29,30 +32,24 @@ __global__ void init_on_device(LBMState S)
     S.d_ux[c][idx] = ux * Stencil::as2;
     S.d_uy[c][idx] = uy * Stencil::as2;
 
-    const real_t inv_rho = real_t(1) / rho;
+    const real_t inv_rho = r::one / rho;
 
-    real_t mxx = real_t(0);
-    real_t mxy = real_t(0);
-    real_t myy = real_t(0);
+    real_t mxx = r::zero;
+    real_t mxy = r::zero;
+    real_t myy = r::zero;
 
 #pragma unroll
     for (int i = 0; i < Stencil::Q; ++i)
     {
-        const real_t cx = static_cast<real_t>(Stencil::cx(i));
-        const real_t cy = static_cast<real_t>(Stencil::cy(i));
 
-        const real_t Hxx = cx * cx - Stencil::cs2;
-        const real_t Hxy = cx * cy;
-        const real_t Hyy = cy * cy - Stencil::cs2;
-
-        mxx += pop[i] * Hxx;
-        mxy += pop[i] * Hxy;
-        myy += pop[i] * Hyy;
+        mxx += pop[i] * hermite<MomentId::mxx>(i);
+        mxy += pop[i] * hermite<MomentId::mxy>(i);
+        myy += pop[i] * hermite<MomentId::myy>(i);
     }
 
-    S.d_mxx[c][idx] = mxx * inv_rho * (Stencil::as4 * real_t(0.5));
-    S.d_mxy[c][idx] = mxy * inv_rho * Stencil::as4;
-    S.d_myy[c][idx] = myy * inv_rho * (Stencil::as4 * real_t(0.5));
+    S.d_mxx[c][idx] = mxx * inv_rho * inv_scale_factor<MomentId::mxx>();
+    S.d_mxy[c][idx] = mxy * inv_rho * inv_scale_factor<MomentId::mxy>();
+    S.d_myy[c][idx] = myy * inv_rho * inv_scale_factor<MomentId::myy>();
 }
 
 void init_state(LBMState &S, const CudaConfig &cfg)

@@ -8,4 +8,4 @@ struct CudaConfig
     size_t shared_bytes;
 };
 
-[[nodiscard]] __host__ CudaConfig make_config(int shared_memory);
+[[nodiscard]] __host__ CudaConfig make_config();

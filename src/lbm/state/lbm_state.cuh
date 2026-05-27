@@ -12,7 +12,7 @@ struct LBMState
     real_t *d_rho[2], *d_ux[2], *d_uy[2];
     real_t *d_mxx[2], *d_mxy[2], *d_myy[2];
 
-    int cur; // 0 or 1
+    int cur;
     size_t N;
     size_t bytes_field;
 };
