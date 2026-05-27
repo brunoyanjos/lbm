@@ -35,6 +35,7 @@ set -euo pipefail
 : "${RUN_ID:=}"
 : "${STENCIL:=D2Q9}"
 : "${T_STAR_END:=1000}"
+: "${AVG_START_T_STAR:=0}"
 : "${VERBOSE:=0}"
 : "${VTI_INTERVAL:=0}"
 : "${WARMUP:=100}"
@@ -224,6 +225,7 @@ while [[ $# -gt 0 ]]; do
     --io)             IO="$2"; shift 2 ;;
     --warmup)         WARMUP="$2"; shift 2 ;;
     --t_star_end)     T_STAR_END="$2"; shift 2 ;;
+    --avg_start_t_star) AVG_START_T_STAR="$2"; shift 2 ;;
     --vti_interval)   VTI_INTERVAL="$2"; shift 2 ;;
     --verbose)        VERBOSE="$2"; shift 2 ;;
     --progress)       PROGRESS="$2"; shift 2 ;;
@@ -238,6 +240,7 @@ Usage:
   bash compile.sh --grid 256
   bash compile.sh --grid 256x128
   bash compile.sh --t_star_end 1000
+  bash compile.sh --avg_start_t_star 500
   bash compile.sh --vti_interval 10000
   bash compile.sh --restart 1 --checkpoint_run_id 20260525_120000_D2Q9_float_128x128 --checkpoint_t_star 900 --t_star_end 2000
 EOF
@@ -255,6 +258,7 @@ done
 
 case "${RESTART}" in 0|1) ;; *) die "RESTART must be 0 or 1: '${RESTART}'" ;; esac
 [[ "${T_STAR_END}" =~ ^[0-9]+$ ]] || die "T_STAR_END must be numeric: '${T_STAR_END}'"
+[[ "${AVG_START_T_STAR}" =~ ^[0-9]+$ ]] || die "AVG_START_T_STAR must be numeric: '${AVG_START_T_STAR}'"
 if [[ -n "${CHECKPOINT_T_STAR}" ]]; then
   [[ "${CHECKPOINT_T_STAR}" =~ ^[0-9]+$ ]] || die "CHECKPOINT_T_STAR must be numeric: '${CHECKPOINT_T_STAR}'"
 fi
@@ -309,7 +313,7 @@ OBJ_DIR="${BUILD_DIR}/obj"
 BIN_PATH="${BUILD_DIR}/${EXEC_NAME}"
 
 echo "ARCHES: ${ARCHES}"
-echo "STENCIL=${STENCIL} REAL=${REAL} GRID=${GRID_NX}x${GRID_NY} T_STAR_END=${T_STAR_END}"
+echo "STENCIL=${STENCIL} REAL=${REAL} GRID=${GRID_NX}x${GRID_NY} T_STAR_END=${T_STAR_END} AVG_START_T_STAR=${AVG_START_T_STAR}"
 if [[ "${RESTART}" == "1" ]]; then
   echo "RESTART=1 CHECKPOINT_RUN_ID=${CHECKPOINT_RUN_ID:-<direct-dir>} CHECKPOINT_DIR=${CHECKPOINT_DIR}"
   echo "CHECKPOINT_FILE=${CHECKPOINT_FILE} STEP=${CHECKPOINT_STEP} T_STAR=${CHECKPOINT_T_STAR}"
@@ -367,6 +371,7 @@ if [[ -n "${RE}" ]]; then
 fi
 
 NVCCFLAGS+=(-DLBM_T_STAR_END="${T_STAR_END}")
+NVCCFLAGS+=(-DLBM_AVG_START_T_STAR="${AVG_START_T_STAR}")
 
 if [[ -n "${CHECKPOINT_N_STEPS}" ]]; then
   NVCCFLAGS+=(-DLBM_N_STEPS="${CHECKPOINT_N_STEPS}")

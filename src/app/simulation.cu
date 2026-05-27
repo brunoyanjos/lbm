@@ -25,6 +25,24 @@
 
 namespace app
 {
+    namespace
+    {
+        bool should_sample_flow_averages(int step)
+        {
+            return step >= AVG_START_STEP;
+        }
+
+        double compute_tke_and_sample_flow_averages(const LBMState &state,
+                                                    io::FlowAverages &flow_averages,
+                                                    int step)
+        {
+            if (should_sample_flow_averages(step))
+                return io::compute_ke_and_sample_flow_averages_host_2d(state, flow_averages);
+
+            return io::compute_ke_host_2d(state);
+        }
+    }
+
     void run(const CudaConfig &cfg, const RunContext &ctx)
     {
         auto state = lbm_allocate_state();
@@ -43,8 +61,9 @@ namespace app
             {
                 io::seed_tke_history_from_checkpoint(ctx.checkpoint_dir, ctx.out_dir,
                                                      static_cast<int>(checkpoint_step));
-                io::seed_flow_averages_from_checkpoint(ctx.checkpoint_dir, flow_averages,
-                                                       static_cast<int>(checkpoint_step));
+                if (should_sample_flow_averages(static_cast<int>(checkpoint_step)))
+                    io::seed_flow_averages_from_checkpoint(ctx.checkpoint_dir, flow_averages,
+                                                           static_cast<int>(checkpoint_step));
             }
         }
         else
@@ -66,7 +85,9 @@ namespace app
         if (!ctx.restart_from_checkpoint && ctx.enable_io)
         {
             upload_state_to_host(state);
-            const double ke = io::compute_ke_and_accumulate_flow_averages_host_2d(state, flow_averages);
+            const double ke = compute_tke_and_sample_flow_averages(state,
+                                                                   flow_averages,
+                                                                   current_step);
 
             io::tke_bin_append(ctx.out_dir, current_step, ke);
             io::write_vti(state, cfg, current_step, ctx.out_dir);
@@ -122,8 +143,9 @@ namespace app
 
                 if (save_tke)
                 {
-                    const double ke = io::compute_ke_and_accumulate_flow_averages_host_2d(state,
-                                                                                          flow_averages);
+                    const double ke = compute_tke_and_sample_flow_averages(state,
+                                                                           flow_averages,
+                                                                           current_step);
                     io::tke_bin_append(ctx.out_dir, current_step, ke);
                 }
 
@@ -131,7 +153,8 @@ namespace app
                 {
                     io::write_vti(state, cfg, current_step, ctx.out_dir);
                     io::write_checkpoint_current(state, current_step, ctx.out_dir);
-                    io::write_flow_averages_checkpoint(flow_averages, current_step, ctx.out_dir);
+                    if (flow_averages.samples > 0)
+                        io::write_flow_averages_checkpoint(flow_averages, current_step, ctx.out_dir);
                     last_checkpoint_step = current_step;
                 }
             }
@@ -163,9 +186,11 @@ namespace app
             if (last_checkpoint_step != t_end)
             {
                 io::write_checkpoint_current(state, t_end, ctx.out_dir);
-                io::write_flow_averages_checkpoint(flow_averages, t_end, ctx.out_dir);
+                if (flow_averages.samples > 0)
+                    io::write_flow_averages_checkpoint(flow_averages, t_end, ctx.out_dir);
             }
-            io::write_flow_averages(flow_averages, t_end, ctx.out_dir);
+            if (flow_averages.samples > 0)
+                io::write_flow_averages(flow_averages, t_end, ctx.out_dir);
             io::write_centerline_profiles(state, t_end * U_LID / NX, ctx.out_dir);
         }
 
