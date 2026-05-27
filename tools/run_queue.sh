@@ -26,20 +26,24 @@ export RUN=1
 export CLEAN=0
 export DEBUG=0
 export RDC=0
-export PROGRESS=0
+export PROGRESS=1
 export PROGRESS_HZ=2
 export WARMUP=100
 export REAL=float   # ou double se quiser
 
 # Tamanhos de grid. Use "256" para 256x256, ou "512x256" para retangular.
 grids=(
-  "32"
-  "64"
-  "128"
+  "512"
 )
 
 cases=(
+  "D2Q9  100"
+  "D2Q9  400"
+  "D2Q9  1000"
   "D2Q9  3200"
+  "D2Q9  5000"
+  "D2Q9  7500"
+  "D2Q9  10000"
 )
 
 for grid in "${grids[@]}"; do
