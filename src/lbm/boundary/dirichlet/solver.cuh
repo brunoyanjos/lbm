@@ -11,7 +11,6 @@
 
 #include "lbm/boundary/common/system_data.cuh"
 #include "lbm/boundary/common/gauss_elimination.cuh"
-#include "lbm/boundary/common/layout/unknown_moments.cuh"
 
 #include "lbm/boundary/dirichlet/accumulator.cuh"
 #include "lbm/boundary/dirichlet/eval_density.cuh"
