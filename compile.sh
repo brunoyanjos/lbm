@@ -94,7 +94,7 @@ import sys
 path = pathlib.Path(sys.argv[1])
 requested_t_star = sys.argv[2]
 
-fmt = "<8sIII" + ("i" * 7) + ("q" * 7) + ("d" * 4) + "I16s"
+fmt = "<8sIII" + ("i" * 9) + ("q" * 7) + ("d" * 4) + "I16s"
 
 def read_header(candidate):
     with candidate.open("rb") as f:
@@ -109,7 +109,7 @@ def read_header(candidate):
         raise SystemExit(f"Invalid checkpoint magic in: {candidate}")
 
     version, header_bytes, endian = values[1:4]
-    if version != 1:
+    if version != 2:
         raise SystemExit(f"Unsupported checkpoint version {version} in: {candidate}")
     if endian != 0x01020304:
         raise SystemExit(f"Unsupported checkpoint endian marker in: {candidate}")
@@ -127,7 +127,7 @@ if path.is_dir():
         selected_values = None
         for candidate in candidates:
             values = read_header(candidate)
-            step, save_interval = values[14], values[16]
+            step, save_interval = values[16], values[18]
             t_star = step // save_interval
             if t_star == requested:
                 selected = candidate
@@ -147,10 +147,10 @@ elif path.is_file():
 else:
     raise SystemExit(f"Checkpoint path does not exist: {path}")
 
-nx, ny, q, real_bytes, real_is_double, _cur, _field_count = values[4:11]
-node_count, field_bytes, payload_bytes, step, n_steps, save_interval, vti_save_interval = values[11:18]
-re, _u_lid, _tau, _omega = values[18:22]
-stencil_name = values[23].split(b"\0", 1)[0].decode("ascii")
+nx, ny, q, real_bytes, real_is_double, _cur, _field_count, reg_order, recurrence = values[4:13]
+node_count, field_bytes, payload_bytes, step, n_steps, save_interval, vti_save_interval = values[13:20]
+re, _u_lid, _tau, _omega = values[20:24]
+stencil_name = values[25].split(b"\0", 1)[0].decode("ascii")
 checkpoint_t_star = step // save_interval
 
 real = "double" if real_is_double else "float"
@@ -161,6 +161,8 @@ print(f"REAL={real}")
 print(f"NX={nx}")
 print(f"NY={ny}")
 print(f"RE={re:.17g}")
+print(f"REG_ORDER={reg_order}")
+print(f"RECURRENCE={recurrence}")
 print(f"CHECKPOINT_N_STEPS={n_steps}")
 print(f"CHECKPOINT_SAVE_INTERVAL={save_interval}")
 print(f"CHECKPOINT_VTI_SAVE_INTERVAL={vti_save_interval}")
@@ -184,6 +186,8 @@ PY
       NX) NX="${value}" ;;
       NY) NY="${value}" ;;
       RE) RE="${value}" ;;
+      REG_ORDER) REG_ORDER="${value}" ;;
+      RECURRENCE) RECURRENCE="${value}" ;;
       CHECKPOINT_N_STEPS) CHECKPOINT_N_STEPS="${value}" ;;
       CHECKPOINT_SAVE_INTERVAL) CHECKPOINT_SAVE_INTERVAL="${value}" ;;
       CHECKPOINT_VTI_SAVE_INTERVAL) CHECKPOINT_VTI_SAVE_INTERVAL="${value}" ;;
@@ -317,7 +321,12 @@ make_gencodes "${ARCHES}"
 # Build dirs
 # =====================================================
 
-CFG_TAG="${STENCIL}_${REAL}_${GRID_NX}x${GRID_NY}_reg${REG_ORDER}_rec${RECURRENCE}"
+REC_TAG=""
+if [[ "${RECURRENCE}" == "1" ]]; then
+  REC_TAG="_rec"
+fi
+
+CFG_TAG="${STENCIL}_${REAL}_${GRID_NX}x${GRID_NY}_reg${REG_ORDER}${REC_TAG}"
 BUILD_DIR="${BUILD_ROOT}/${CFG_TAG}"
 OBJ_DIR="${BUILD_DIR}/obj"
 BIN_PATH="${BUILD_DIR}/${EXEC_NAME}"
@@ -465,7 +474,7 @@ if [[ "${RUN}" == "1" ]]; then
     if [[ "${RESTART}" == "1" ]]; then
       CURRENT_RUN_ID="$(date +%Y%m%d_%H%M%S)_restart_${CHECKPOINT_RUN_ID:-checkpoint}"
     else
-      CURRENT_RUN_ID="$(date +%Y%m%d_%H%M%S)_${STENCIL}_${REAL}_${GRID_NX}x${GRID_NY}_reg${REG_ORDER}_rec${RECURRENCE}${RE:+_RE${RE}}"
+      CURRENT_RUN_ID="$(date +%Y%m%d_%H%M%S)_${STENCIL}_${REAL}_${GRID_NX}x${GRID_NY}_reg${REG_ORDER}${REC_TAG}${RE:+_RE${RE}}"
     fi
   else
     CURRENT_RUN_ID="${RUN_ID}"

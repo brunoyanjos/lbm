@@ -73,6 +73,8 @@ namespace io
                 throw std::runtime_error("Checkpoint stencil does not match this executable");
             if (cfg.real_bytes != expected.real_bytes || cfg.real_is_double != expected.real_is_double)
                 throw std::runtime_error("Checkpoint real_t precision does not match this executable");
+            if (cfg.reg_order != expected.reg_order || cfg.recurrence != expected.recurrence)
+                throw std::runtime_error("Checkpoint regularization config does not match this executable");
             if (cfg.field_count != expected.field_count ||
                 cfg.node_count != expected.node_count ||
                 cfg.field_bytes != expected.field_bytes ||
@@ -80,6 +82,54 @@ namespace io
                 throw std::runtime_error("Checkpoint payload layout does not match this executable");
             if (cfg.cur != 0 && cfg.cur != 1)
                 throw std::runtime_error("Checkpoint cur buffer must be 0 or 1");
+        }
+
+        template <int RegOrder, bool Rec, bool HighOrder>
+        void write_extra_fields(std::ofstream &, const LBMStateFor<RegOrder, Rec, HighOrder> &)
+        {
+        }
+
+        template <bool HighOrder>
+        void write_extra_fields(std::ofstream &file, const LBMStateFor<3, false, HighOrder> &state)
+        {
+            if constexpr (HighOrder)
+                write_field(file, state.h_mxxx, state.bytes_field);
+            write_field(file, state.h_mxxy, state.bytes_field);
+            write_field(file, state.h_mxyy, state.bytes_field);
+            if constexpr (HighOrder)
+                write_field(file, state.h_myyy, state.bytes_field);
+        }
+
+        template <int RegOrder, bool Rec, bool HighOrder>
+        void read_extra_fields(std::ifstream &, LBMStateFor<RegOrder, Rec, HighOrder> &)
+        {
+        }
+
+        template <bool HighOrder>
+        void read_extra_fields(std::ifstream &file, LBMStateFor<3, false, HighOrder> &state)
+        {
+            if constexpr (HighOrder)
+                read_field(file, state.h_mxxx, state.bytes_field);
+            read_field(file, state.h_mxxy, state.bytes_field);
+            read_field(file, state.h_mxyy, state.bytes_field);
+            if constexpr (HighOrder)
+                read_field(file, state.h_myyy, state.bytes_field);
+        }
+
+        template <int RegOrder, bool Rec, bool HighOrder>
+        void upload_extra_fields(const LBMStateFor<RegOrder, Rec, HighOrder> &, int)
+        {
+        }
+
+        template <bool HighOrder>
+        void upload_extra_fields(const LBMStateFor<3, false, HighOrder> &state, int c)
+        {
+            if constexpr (HighOrder)
+                CUDA_CHECK(cudaMemcpy(state.d_mxxx[c], state.h_mxxx, state.bytes_field, cudaMemcpyHostToDevice));
+            CUDA_CHECK(cudaMemcpy(state.d_mxxy[c], state.h_mxxy, state.bytes_field, cudaMemcpyHostToDevice));
+            CUDA_CHECK(cudaMemcpy(state.d_mxyy[c], state.h_mxyy, state.bytes_field, cudaMemcpyHostToDevice));
+            if constexpr (HighOrder)
+                CUDA_CHECK(cudaMemcpy(state.d_myyy[c], state.h_myyy, state.bytes_field, cudaMemcpyHostToDevice));
         }
     }
 
@@ -112,6 +162,7 @@ namespace io
         write_field(file, state.h_mxx, state.bytes_field);
         write_field(file, state.h_mxy, state.bytes_field);
         write_field(file, state.h_myy, state.bytes_field);
+        write_extra_fields(file, state);
 
         if (!file.good())
             std::cerr << "Checkpoint write failed: " << filepath.string() << "\n";
@@ -138,6 +189,7 @@ namespace io
         read_field(file, state.h_mxx, state.bytes_field);
         read_field(file, state.h_mxy, state.bytes_field);
         read_field(file, state.h_myy, state.bytes_field);
+        read_extra_fields(file, state);
 
         if (!file.good())
             throw std::runtime_error("Could not read checkpoint payload: " + filepath.string());
@@ -149,6 +201,7 @@ namespace io
         CUDA_CHECK(cudaMemcpy(state.d_mxx[c], state.h_mxx, state.bytes_field, cudaMemcpyHostToDevice));
         CUDA_CHECK(cudaMemcpy(state.d_mxy[c], state.h_mxy, state.bytes_field, cudaMemcpyHostToDevice));
         CUDA_CHECK(cudaMemcpy(state.d_myy[c], state.h_myy, state.bytes_field, cudaMemcpyHostToDevice));
+        upload_extra_fields(state, c);
 
         std::cout << "[CHECKPOINT] loaded " << filepath.string()
                   << " at step " << cfg.step << "\n";

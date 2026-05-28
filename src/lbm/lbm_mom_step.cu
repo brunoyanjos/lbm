@@ -40,7 +40,7 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
     {
         bc_velocity(M, x, y);
 
-        apply_boundary(pop, valid_ms, M);
+        boundary::dirichlet::apply_boundary(pop, valid_ms, M);
     }
     else
     {
@@ -52,7 +52,7 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
         {
             load_state_moments(S, c, idxGlobal(x, y), M);
 
-            evaluate_fluid_node(pop, valid_ms, M);
+            boundary::fluid::apply_boundary(pop, valid_ms, M);
         }
     }
 

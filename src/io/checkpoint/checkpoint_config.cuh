@@ -33,6 +33,8 @@ namespace io
         std::int32_t real_is_double;
         std::int32_t cur;
         std::int32_t field_count;
+        std::int32_t reg_order;
+        std::int32_t recurrence;
 
         std::int64_t node_count;
         std::int64_t field_bytes;
@@ -80,7 +82,7 @@ namespace io
     {
         CheckpointConfig cfg{};
         std::memcpy(cfg.magic, "LBMCHK1", 8);
-        cfg.version = 1;
+        cfg.version = 2;
         cfg.header_bytes = sizeof(CheckpointConfig);
         cfg.endian_marker = 0x01020304u;
 
@@ -90,7 +92,11 @@ namespace io
         cfg.real_bytes = sizeof(real_t);
         cfg.real_is_double = (sizeof(real_t) == sizeof(double)) ? 1 : 0;
         cfg.cur = cur;
+        cfg.reg_order = REG_ORDER;
+        cfg.recurrence = USE_RECURRENCE ? 1 : 0;
         cfg.field_count = 6;
+        if constexpr (REG_ORDER == 3 && !USE_RECURRENCE)
+            cfg.field_count += Stencil::high_order ? 4 : 2;
 
         cfg.node_count = static_cast<std::int64_t>(NX) * static_cast<std::int64_t>(NY);
         cfg.field_bytes = cfg.node_count * static_cast<std::int64_t>(sizeof(real_t));
