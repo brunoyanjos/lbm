@@ -1,10 +1,5 @@
 #pragma once
 
-// Escolha o stencil via macro de compilação:
-//   -DLBM_STENCIL_D2Q9
-//   -DLBM_STENCIL_D2V17
-//   -DLBM_STENCIL_D2V37
-
 #if defined(LBM_STENCIL_D2Q9)
 
 #include "stencils/d2q9.cuh"

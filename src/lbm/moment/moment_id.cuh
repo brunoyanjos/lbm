@@ -9,12 +9,22 @@ enum class MomentId : int
 
     mxx,
     mxy,
-    myy
+    myy,
+
+    mxxx,
+    mxxy,
+    mxyy,
+    myyy
 };
 
 enum class NonlinearMomentId : int
 {
     uxux = 0,
     uxuy,
-    uyuy
+    uyuy,
+
+    uxuxux,
+    uxuxuy,
+    uxuyuy,
+    uyuyuy
 };

@@ -143,6 +143,14 @@ src/
 STENCIL=D2Q9 REAL=double DEBUG=1 ./compile.sh
 ```
 
+Regularization order and recurrence can also be selected at compile time:
+
+```bash
+./compile.sh --reg_order 3 --recurrence 1
+```
+
+Equivalent environment variables are `REG_ORDER=2|3` and `RECURRENCE=0|1`.
+
 ---
 
 ## Run

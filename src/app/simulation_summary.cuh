@@ -4,6 +4,7 @@
 
 #include "../core/geometry.h"
 #include "../core/physics.h"
+#include "../core/simulation_config.h"
 #include "../app/cuda_config.cuh"
 #include "../lbm/stencil_active.cuh"
 
@@ -33,6 +34,10 @@ inline void print_simulation_summary(const CudaConfig &cfg,
 
     std::cout << "Q                 : " << Stencil::Q << "\n";
     std::cout << "cs^2              : " << Stencil::cs2 << "\n\n";
+
+    // Regularization
+    std::cout << "Regularization    : order " << REG_ORDER << "\n";
+    std::cout << "Recurrence        : " << (USE_RECURRENCE ? "on" : "off") << "\n\n";
 
     // Domain
     std::cout << "Domain size       : "

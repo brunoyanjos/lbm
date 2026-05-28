@@ -13,6 +13,7 @@
 #include "lbm/moment/moment_scaling.cuh"
 #include "lbm/moment/node_moments.cuh"
 #include "lbm/moment/scale_factor.cuh"
+#include "lbm/state/state_load.cuh"
 #include "lbm/state/state_store.cuh"
 #include "lbm/population/pop_reconstruction.cuh"
 
@@ -49,12 +50,7 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
         }
         else
         {
-            M.rho = S.d_rho[c][idxGlobal(x, y)] + RHO_0;
-            M.ux = S.d_ux[c][idxGlobal(x, y)] * inv_scale_factor<MomentId::ux>();
-            M.uy = S.d_uy[c][idxGlobal(x, y)] * inv_scale_factor<MomentId::uy>();
-            M.mxx = S.d_mxx[c][idxGlobal(x, y)] * inv_scale_factor<MomentId::mxx>();
-            M.mxy = S.d_mxy[c][idxGlobal(x, y)] * inv_scale_factor<MomentId::mxy>();
-            M.myy = S.d_myy[c][idxGlobal(x, y)] * inv_scale_factor<MomentId::myy>();
+            load_state_moments(S, c, idxGlobal(x, y), M);
 
             evaluate_fluid_node(pop, valid_ms, M);
         }

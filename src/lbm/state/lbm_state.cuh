@@ -1,9 +1,11 @@
 #pragma once
 
 #include "../../core/types.cuh"
+#include "../../core/simulation_config.h"
 #include "../../app/cuda_config.cuh"
+#include "lbm/stencil_active.cuh"
 
-struct LBMState
+struct SecondOrderState
 {
     // host (single buffer for output)
     real_t *h_rho, *h_ux, *h_uy, *h_mxx, *h_mxy, *h_myy;
@@ -16,6 +18,27 @@ struct LBMState
     size_t N;
     size_t bytes_field;
 };
+
+template <int Order, bool Rec, bool HighOrder>
+struct LBMStateFor : SecondOrderState
+{
+};
+
+template <>
+struct LBMStateFor<3, false, false> : SecondOrderState
+{
+    real_t *h_mxxy, *h_mxyy;
+    real_t *d_mxxy[2], *d_mxyy[2];
+};
+
+template <>
+struct LBMStateFor<3, false, true> : SecondOrderState
+{
+    real_t *h_mxxx, *h_mxxy, *h_mxyy, *h_myyy;
+    real_t *d_mxxx[2], *d_mxxy[2], *d_mxyy[2], *d_myyy[2];
+};
+
+using LBMState = LBMStateFor<REG_ORDER, USE_RECURRENCE, Stencil::high_order>;
 
 [[nodiscard]] __host__ LBMState lbm_allocate_state();
 

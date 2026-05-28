@@ -23,7 +23,25 @@
 #define LBM_AVG_START_T_STAR 0
 #endif
 
+#ifndef LBM_REG_ORDER
+#define LBM_REG_ORDER 2
+#endif
+
+#if LBM_REG_ORDER != 2 && LBM_REG_ORDER != 3
+#error "LBM_REG_ORDER must be 2 or 3"
+#endif
+
+#ifndef LBM_USE_RECURRENCE
+#define LBM_USE_RECURRENCE 0
+#endif
+
+#if LBM_USE_RECURRENCE != 0 && LBM_USE_RECURRENCE != 1
+#error "LBM_USE_RECURRENCE must be 0 or 1"
+#endif
+
 constexpr int N_STEPS = LBM_N_STEPS;
 constexpr int SAVE_INTERVAL = LBM_SAVE_INTERVAL;
 constexpr int VTI_SAVE_INTERVAL = LBM_VTI_SAVE_INTERVAL;
 constexpr int AVG_START_STEP = real_t(LBM_AVG_START_T_STAR) * NX / U_LID;
+constexpr int REG_ORDER = LBM_REG_ORDER;
+constexpr bool USE_RECURRENCE = LBM_USE_RECURRENCE != 0;

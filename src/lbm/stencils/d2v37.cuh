@@ -5,6 +5,7 @@
 namespace D2V37
 {
     constexpr int Q = 37;
+    constexpr bool high_order = true;
 
     constexpr real_t W0 = static_cast<real_t>(0.233150669132352502286506704066849951);
     constexpr real_t W1 = static_cast<real_t>(0.107306091542219002412464287183139936);

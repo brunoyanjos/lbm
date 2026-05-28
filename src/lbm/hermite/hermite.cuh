@@ -23,6 +23,14 @@ __host__ __device__ __forceinline__
         return cx * cy;
     else if constexpr (Id == MomentId::myy)
         return cy * cy - Stencil::cs2;
+    else if constexpr (Id == MomentId::mxxx)
+        return cx * cx * cx - r::three * Stencil::cs2 * cx;
+    else if constexpr (Id == MomentId::mxxy)
+        return (cx * cx - Stencil::cs2) * cy;
+    else if constexpr (Id == MomentId::mxyy)
+        return cx * (cy * cy - Stencil::cs2);
+    else if constexpr (Id == MomentId::myyy)
+        return cy * cy * cy - r::three * Stencil::cs2 * cy;
     else
     {
         static_assert(always_false_v<Id>, "Unsupported MomentId in hermite().");
