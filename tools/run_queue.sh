@@ -16,6 +16,8 @@ Options:
   --stencil VALUE[,VALUE...]  Stencil(s) to run (default: D2Q9)
   --grid VALUE[,VALUE...]     Grid size(s), N or NXxNY (default: 512)
   --re VALUE[,VALUE...]       Reynolds number(s) (default: 100,400,1000,3200,5000,7500,10000)
+  --reg_order VALUE[,VALUE...] Regularization order(s), 2 or 3 (default: 2)
+  --recurrence VALUE[,VALUE...] Recurrence flag(s), 0 or 1 (default: 0)
   --device VALUE[,VALUE...]   CUDA device id(s), assigned round-robin (default: 0)
   --t_final VALUE             Final t* passed to compile.sh --t_star_end (default: ${T_FINAL})
   --dry-run                   Print commands without running them
@@ -63,6 +65,8 @@ stencils=()
 grids=()
 res=()
 devices=()
+reg_orders=()
+recurrences=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -76,6 +80,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --re)
       append_csv_values res "$2"
+      shift 2
+      ;;
+    --reg_order|--reg-order)
+      append_csv_values reg_orders "$2"
+      shift 2
+      ;;
+    --recurrence)
+      append_csv_values recurrences "$2"
       shift 2
       ;;
     --device|--devices)
@@ -120,9 +132,31 @@ if ((${#res[@]} == 0)); then
   res=("100" "400" "1000" "3200" "5000" "7500" "10000")
 fi
 
+if ((${#reg_orders[@]} == 0)); then
+  reg_orders=("2")
+fi
+
+if ((${#recurrences[@]} == 0)); then
+  recurrences=("0")
+fi
+
 if ((${#devices[@]} == 0)); then
   devices=("0")
 fi
+
+for reg_order in "${reg_orders[@]}"; do
+  [[ "${reg_order}" =~ ^[23]$ ]] || {
+    echo "Error: reg_order must be 2 or 3: '${reg_order}'" >&2
+    exit 1
+  }
+done
+
+for recurrence in "${recurrences[@]}"; do
+  [[ "${recurrence}" =~ ^[01]$ ]] || {
+    echo "Error: recurrence must be 0 or 1: '${recurrence}'" >&2
+    exit 1
+  }
+done
 
 for device in "${devices[@]}"; do
   [[ "${device}" =~ ^[0-9]+$ ]] || {
@@ -136,34 +170,45 @@ for grid in "${grids[@]}"; do
   parse_grid "${grid}"
 
   for stencil in "${stencils[@]}"; do
-    for re in "${res[@]}"; do
-      device="${devices[$((case_index % ${#devices[@]}))]}"
-      ((case_index += 1))
+    for reg_order in "${reg_orders[@]}"; do
+      for recurrence in "${recurrences[@]}"; do
+        for re in "${res[@]}"; do
+          device="${devices[$((case_index % ${#devices[@]}))]}"
+          ((case_index += 1))
 
-      ts="$(date +%Y%m%d_%H%M%S)"
-      run_id="${ts}_${stencil}_${GRID_NX}x${GRID_NY}_RE${re}_T${T_FINAL}_GPU${device}"
+          rec_tag=""
+          if [[ "${recurrence}" == "1" ]]; then
+            rec_tag="_rec"
+          fi
 
-      echo "================================================="
-      echo "[CASE] STENCIL=${stencil}  RE=${re}  GRID=${GRID_NX}x${GRID_NY}  T_FINAL=${T_FINAL}  DEVICE=${device}  RUN_ID=${run_id}"
-      echo "================================================="
+          ts="$(date +%Y%m%d_%H%M%S)"
+          run_id="${ts}_${stencil}_${GRID_NX}x${GRID_NY}_reg${reg_order}${rec_tag}_RE${re}_T${T_FINAL}_GPU${device}"
 
-      cmd=(bash "${ROOT_DIR}/compile.sh" \
-        --stencil "${stencil}" \
-        --re "${re}" \
-        --grid "${GRID_NX}x${GRID_NY}" \
-        --device "${device}" \
-        --t_star_end "${T_FINAL}" \
-        --run_id "${run_id}")
+          echo "================================================="
+          echo "[CASE] STENCIL=${stencil}  REG_ORDER=${reg_order}  RECURRENCE=${recurrence}  RE=${re}  GRID=${GRID_NX}x${GRID_NY}  T_FINAL=${T_FINAL}  DEVICE=${device}  RUN_ID=${run_id}"
+          echo "================================================="
 
-      if [[ "${DRY_RUN}" == "1" ]]; then
-        printf '[DRY_RUN]'
-        printf ' %q' "${cmd[@]}"
-        printf '\n'
-      else
-        "${cmd[@]}"
-      fi
+          cmd=(bash "${ROOT_DIR}/compile.sh" \
+            --stencil "${stencil}" \
+            --reg_order "${reg_order}" \
+            --recurrence "${recurrence}" \
+            --re "${re}" \
+            --grid "${GRID_NX}x${GRID_NY}" \
+            --device "${device}" \
+            --t_star_end "${T_FINAL}" \
+            --run_id "${run_id}")
 
-      echo
+          if [[ "${DRY_RUN}" == "1" ]]; then
+            printf '[DRY_RUN]'
+            printf ' %q' "${cmd[@]}"
+            printf '\n'
+          else
+            "${cmd[@]}"
+          fi
+
+          echo
+        done
+      done
     done
   done
 done
