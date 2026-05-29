@@ -45,10 +45,26 @@ static void configure_simulation_from_checkpoint(app::RunContext &ctx)
 
 int main(int argc, char **argv)
 {
-    CUDA_CHECK(cudaSetDevice(0));
+    const int device_id = get_arg_int(argc, argv, "--device", 0);
+
+    int device_count = 0;
+    CUDA_CHECK(cudaGetDeviceCount(&device_count));
+    if (device_count <= 0)
+    {
+        std::cerr << "No CUDA devices found.\n";
+        return 1;
+    }
+    if (device_id < 0 || device_id >= device_count)
+    {
+        std::cerr << "Invalid CUDA device " << device_id
+                  << ". Available device ids: 0.." << (device_count - 1) << "\n";
+        return 1;
+    }
+
+    CUDA_CHECK(cudaSetDevice(device_id));
 
     cudaDeviceProp prop;
-    CUDA_CHECK(cudaGetDeviceProperties(&prop, 0));
+    CUDA_CHECK(cudaGetDeviceProperties(&prop, device_id));
 
     app::RunContext ctx;
     ctx.out_dir = get_arg(argc, argv, "--out", "runs/default");
@@ -72,6 +88,7 @@ int main(int argc, char **argv)
     configure_simulation_from_checkpoint(ctx);
 
     CudaConfig cfg = make_config();
+    std::cout << "CUDA device      : " << device_id << " / " << device_count << "\n";
     print_simulation_summary(cfg, prop);
 
     app::run(cfg, ctx);

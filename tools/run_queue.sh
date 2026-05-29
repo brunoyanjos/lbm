@@ -16,6 +16,7 @@ Options:
   --stencil VALUE[,VALUE...]  Stencil(s) to run (default: D2Q9)
   --grid VALUE[,VALUE...]     Grid size(s), N or NXxNY (default: 512)
   --re VALUE[,VALUE...]       Reynolds number(s) (default: 100,400,1000,3200,5000,7500,10000)
+  --device VALUE[,VALUE...]   CUDA device id(s), assigned round-robin (default: 0)
   --t_final VALUE             Final t* passed to compile.sh --t_star_end (default: ${T_FINAL})
   --dry-run                   Print commands without running them
   -h, --help                  Show this help
@@ -61,6 +62,7 @@ export REAL=float   # ou double se quiser
 stencils=()
 grids=()
 res=()
+devices=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -74,6 +76,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --re)
       append_csv_values res "$2"
+      shift 2
+      ;;
+    --device|--devices)
+      append_csv_values devices "$2"
       shift 2
       ;;
     --t_final|--t-final|--t_star_end)
@@ -114,23 +120,38 @@ if ((${#res[@]} == 0)); then
   res=("100" "400" "1000" "3200" "5000" "7500" "10000")
 fi
 
+if ((${#devices[@]} == 0)); then
+  devices=("0")
+fi
+
+for device in "${devices[@]}"; do
+  [[ "${device}" =~ ^[0-9]+$ ]] || {
+    echo "Error: device must be numeric: '${device}'" >&2
+    exit 1
+  }
+done
+
+case_index=0
 for grid in "${grids[@]}"; do
   parse_grid "${grid}"
 
   for stencil in "${stencils[@]}"; do
     for re in "${res[@]}"; do
+      device="${devices[$((case_index % ${#devices[@]}))]}"
+      ((case_index += 1))
 
       ts="$(date +%Y%m%d_%H%M%S)"
-      run_id="${ts}_${stencil}_${GRID_NX}x${GRID_NY}_RE${re}_T${T_FINAL}"
+      run_id="${ts}_${stencil}_${GRID_NX}x${GRID_NY}_RE${re}_T${T_FINAL}_GPU${device}"
 
       echo "================================================="
-      echo "[CASE] STENCIL=${stencil}  RE=${re}  GRID=${GRID_NX}x${GRID_NY}  T_FINAL=${T_FINAL}  RUN_ID=${run_id}"
+      echo "[CASE] STENCIL=${stencil}  RE=${re}  GRID=${GRID_NX}x${GRID_NY}  T_FINAL=${T_FINAL}  DEVICE=${device}  RUN_ID=${run_id}"
       echo "================================================="
 
       cmd=(bash "${ROOT_DIR}/compile.sh" \
         --stencil "${stencil}" \
         --re "${re}" \
         --grid "${GRID_NX}x${GRID_NY}" \
+        --device "${device}" \
         --t_star_end "${T_FINAL}" \
         --run_id "${run_id}")
 
