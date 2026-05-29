@@ -5,6 +5,7 @@
 namespace D2Q9
 {
     constexpr int Q = 9;
+    constexpr int radius = 1;
     constexpr bool high_order = false;
 
     constexpr real_t cs2 = r::third;

@@ -1,15 +1,19 @@
 #pragma once
 #include <cuda_runtime.h>
 #include <iostream>
+#include <vector>
 
 #include "../core/geometry.h"
+#include "../core/local_domain.cuh"
 #include "../core/physics.h"
 #include "../core/simulation_config.h"
 #include "../app/cuda_config.cuh"
+#include "../app/domain_partition.cuh"
 #include "../lbm/stencil_active.cuh"
 
 inline void print_simulation_summary(const CudaConfig &cfg,
-                                     const cudaDeviceProp &prop)
+                                     const cudaDeviceProp &prop,
+                                     const std::vector<app::DomainPartition> &partitions)
 {
     std::cout << "\n================ Simulation Summary ================\n";
 
@@ -33,6 +37,7 @@ inline void print_simulation_summary(const CudaConfig &cfg,
 #endif
 
     std::cout << "Q                 : " << Stencil::Q << "\n";
+    std::cout << "Stencil radius    : " << Stencil::radius << "\n";
     std::cout << "cs^2              : " << Stencil::cs2 << "\n\n";
 
     // Regularization
@@ -44,6 +49,23 @@ inline void print_simulation_summary(const CudaConfig &cfg,
               << NX << " x " << NY << "\n";
     std::cout << "Total nodes       : "
               << NX * NY << "\n\n";
+
+    // Partitions
+    std::cout << "Partitions        : " << partitions.size() << "\n";
+    for (size_t i = 0; i < partitions.size(); ++i)
+    {
+        const app::DomainPartition &partition = partitions[i];
+        const LocalDomain local = make_local_domain(partition.y_begin,
+                                                    partition.y_end,
+                                                    partition.halo);
+        std::cout << "Partition " << i << "       : device=" << partition.device_id
+                  << " y=[" << partition.y_begin << "," << partition.y_end << ")"
+                  << " local_ny=" << partition.local_ny
+                  << " halo=" << partition.halo
+                  << " storage_ny=" << local.storage_ny
+                  << " storage_nodes=" << local.N << "\n";
+    }
+    std::cout << "\n";
 
     // Physics / nondimensional
     std::cout << "Re                : " << RE << "\n";

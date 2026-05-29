@@ -10,6 +10,7 @@ set -euo pipefail
 : "${CLEAN:=0}"
 : "${DEBUG:=0}"
 : "${DEVICE:=0}"
+: "${DEVICES:=}"
 : "${EXEC_NAME:=sim}"
 : "${GRID:=}"
 : "${IO:=1}"
@@ -220,6 +221,7 @@ while [[ $# -gt 0 ]]; do
     --clean)          CLEAN="$2"; shift 2 ;;
     --debug)          DEBUG="$2"; shift 2 ;;
     --device)         DEVICE="$2"; shift 2 ;;
+    --devices)        DEVICES="$2"; shift 2 ;;
     --rdc)            RDC="$2"; shift 2 ;;
     --arches)         ARCHES="$2"; shift 2 ;;
     --exec)           EXEC_NAME="$2"; shift 2 ;;
@@ -248,6 +250,7 @@ Usage:
   bash compile.sh --stencil D2Q9 --real float --run 1
   bash compile.sh --grid 256
   bash compile.sh --device 0
+  bash compile.sh --devices 0,1
   bash compile.sh --grid 256x128
   bash compile.sh --t_star_end 1000
   bash compile.sh --avg_start_t_star 500
@@ -299,6 +302,9 @@ case "${RECURRENCE}" in 0|1) ;; *) die "RECURRENCE must be 0 or 1: '${RECURRENCE
 [[ "${NX}" =~ ^[0-9]+$ ]] || die "NX must be numeric: '${NX}'"
 [[ "${NY}" =~ ^[0-9]+$ ]] || die "NY must be numeric: '${NY}'"
 [[ "${DEVICE}" =~ ^[0-9]+$ ]] || die "DEVICE must be numeric: '${DEVICE}'"
+if [[ -n "${DEVICES}" ]]; then
+  [[ "${DEVICES}" =~ ^[0-9]+(,[0-9]+)*$ ]] || die "DEVICES must be a comma-separated numeric list: '${DEVICES}'"
+fi
 
 if [[ -n "${GRID}" ]]; then
   parse_grid "${GRID}"
@@ -339,6 +345,9 @@ echo "ARCHES: ${ARCHES}"
 echo "STENCIL=${STENCIL} REAL=${REAL} GRID=${GRID_NX}x${GRID_NY} T_STAR_END=${T_STAR_END} AVG_START_T_STAR=${AVG_START_T_STAR}"
 echo "REG_ORDER=${REG_ORDER} RECURRENCE=${RECURRENCE}"
 echo "DEVICE=${DEVICE}"
+if [[ -n "${DEVICES}" ]]; then
+  echo "DEVICES=${DEVICES}"
+fi
 if [[ "${RESTART}" == "1" ]]; then
   echo "RESTART=1 CHECKPOINT_RUN_ID=${CHECKPOINT_RUN_ID:-<direct-dir>} CHECKPOINT_DIR=${CHECKPOINT_DIR}"
   echo "CHECKPOINT_FILE=${CHECKPOINT_FILE} STEP=${CHECKPOINT_STEP} T_STAR=${CHECKPOINT_T_STAR}"
@@ -498,6 +507,7 @@ if [[ "${RUN}" == "1" ]]; then
   "${BIN_PATH}" \
     --out "${OUT_DIR}" \
     --device "${DEVICE}" \
+    --devices "${DEVICES:-${DEVICE}}" \
     --restart "${RESTART}" \
     --checkpoint_run_id "${CHECKPOINT_RUN_ID}" \
     --checkpoint_dir "${CHECKPOINT_FILE:-${CHECKPOINT_DIR}}" \

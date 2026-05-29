@@ -16,7 +16,8 @@ Options:
   --stencil VALUE[,VALUE...]  Stencil(s) to run (default: D2Q9)
   --grid VALUE[,VALUE...]     Grid size(s), N or NXxNY (default: 512)
   --re VALUE[,VALUE...]       Reynolds number(s) (default: 100,400,1000,3200,5000,7500,10000)
-  --device VALUE[,VALUE...]   CUDA device id(s), assigned round-robin (default: 0)
+  --device VALUE[,VALUE...]   Primary CUDA device id(s), assigned round-robin (default: 0)
+  --devices VALUE[,VALUE...]  Multi-GPU partition device list passed to compile.sh
   --t_final VALUE             Final t* passed to compile.sh --t_star_end (default: ${T_FINAL})
   --dry-run                   Print commands without running them
   -h, --help                  Show this help
@@ -63,6 +64,7 @@ stencils=()
 grids=()
 res=()
 devices=()
+partition_devices=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -78,8 +80,12 @@ while [[ $# -gt 0 ]]; do
       append_csv_values res "$2"
       shift 2
       ;;
-    --device|--devices)
+    --device)
       append_csv_values devices "$2"
+      shift 2
+      ;;
+    --devices)
+      partition_devices="$2"
       shift 2
       ;;
     --t_final|--t-final|--t_star_end)
@@ -131,6 +137,13 @@ for device in "${devices[@]}"; do
   }
 done
 
+if [[ -n "${partition_devices}" ]]; then
+  [[ "${partition_devices}" =~ ^[0-9]+(,[0-9]+)*$ ]] || {
+    echo "Error: devices must be a comma-separated numeric list: '${partition_devices}'" >&2
+    exit 1
+  }
+fi
+
 case_index=0
 for grid in "${grids[@]}"; do
   parse_grid "${grid}"
@@ -138,13 +151,15 @@ for grid in "${grids[@]}"; do
   for stencil in "${stencils[@]}"; do
     for re in "${res[@]}"; do
       device="${devices[$((case_index % ${#devices[@]}))]}"
+      run_devices="${partition_devices:-${device}}"
       ((case_index += 1))
 
       ts="$(date +%Y%m%d_%H%M%S)"
-      run_id="${ts}_${stencil}_${GRID_NX}x${GRID_NY}_RE${re}_T${T_FINAL}_GPU${device}"
+      gpu_tag="${run_devices//,/_}"
+      run_id="${ts}_${stencil}_${GRID_NX}x${GRID_NY}_RE${re}_T${T_FINAL}_GPU${gpu_tag}"
 
       echo "================================================="
-      echo "[CASE] STENCIL=${stencil}  RE=${re}  GRID=${GRID_NX}x${GRID_NY}  T_FINAL=${T_FINAL}  DEVICE=${device}  RUN_ID=${run_id}"
+      echo "[CASE] STENCIL=${stencil}  RE=${re}  GRID=${GRID_NX}x${GRID_NY}  T_FINAL=${T_FINAL}  DEVICE=${device}  DEVICES=${run_devices}  RUN_ID=${run_id}"
       echo "================================================="
 
       cmd=(bash "${ROOT_DIR}/compile.sh" \
@@ -152,6 +167,7 @@ for grid in "${grids[@]}"; do
         --re "${re}" \
         --grid "${GRID_NX}x${GRID_NY}" \
         --device "${device}" \
+        --devices "${run_devices}" \
         --t_star_end "${T_FINAL}" \
         --run_id "${run_id}")
 
