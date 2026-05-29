@@ -28,6 +28,14 @@ __host__ __device__ __forceinline__
     {
         return r::half * Stencil::as4;
     }
+    else if constexpr (Id == MomentId::mxxy || Id == MomentId::mxyy)
+    {
+        return r::half * Stencil::as6;
+    }
+    else if constexpr (Id == MomentId::mxxx || Id == MomentId::myyy)
+    {
+        return r::sixth * Stencil::as6;
+    }
     else
     {
         static_assert(always_false_v<Id>, "Unsupported MomentId in moment_prefactor().");
