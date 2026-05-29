@@ -1,12 +1,20 @@
 #pragma once
 
-#include "../../core/types.cuh"
-#include "../../core/simulation_config.h"
-#include "../../app/cuda_config.cuh"
+#include "app/cuda_config.cuh"
+#include "app/run_context.cuh"
+
+#include "core/types.cuh"
+#include "core/simulation_config.h"
+#include "core/local_domain.cuh"
+
 #include "lbm/stencil_active.cuh"
+
+#include <vector>
 
 struct SecondOrderState
 {
+    LocalDomain domain;
+
     // host (single buffer for output)
     real_t *h_rho, *h_ux, *h_uy, *h_mxx, *h_mxy, *h_myy;
 
@@ -40,6 +48,10 @@ struct LBMStateFor<3, false, true> : SecondOrderState
 
 using LBMState = LBMStateFor<REG_ORDER, USE_RECURRENCE, Stencil::high_order>;
 
-[[nodiscard]] __host__ LBMState lbm_allocate_state();
+[[nodiscard]] __host__ LBMState lbm_allocate_state(const LocalDomain &domain);
 
 __host__ void lbm_free_state(LBMState &S);
+
+[[nodiscard]] __host__ std::vector<LBMState> allocate_partition_states(const app::RunContext &ctx);
+
+__host__ void free_partition_states(std::vector<LBMState> &states, const app::RunContext &ctx);

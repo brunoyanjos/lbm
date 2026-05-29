@@ -9,7 +9,6 @@
 namespace io
 {
     void write_performance(const std::string &out_dir,
-                           const CudaConfig &,
                            const app::BenchmarkResult &r)
     {
         namespace fs = std::filesystem;

@@ -6,6 +6,5 @@
 namespace io
 {
     void write_performance(const std::string &out_dir,
-                           const CudaConfig &cfg,
                            const app::BenchmarkResult &r);
 }

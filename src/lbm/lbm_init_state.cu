@@ -1,6 +1,8 @@
 #include "lbm_init_state.cuh"
 #include <cuda_runtime.h>
 
+#include "app/cuda_config.cuh"
+
 #include "core/geometry.h"
 #include "core/physics.h"
 #include "core/indexing.cuh"
@@ -51,7 +53,8 @@ __host__ void upload_extra_state_fields(LBMStateFor<3, false, HighOrder> &S, int
 __global__ void init_on_device(LBMState S)
 {
     int x, y;
-    const size_t idx = idxThreadGlobal2D(x, y);
+
+    const size_t idx = idxThreadLocalInterior2D(x, y, S.domain);
     if (idx == INVALID_INDEX)
         return;
 
@@ -89,13 +92,26 @@ __global__ void init_on_device(LBMState S)
     init_extra_state_fields(S, c, idx);
 }
 
-void init_state(LBMState &S, const CudaConfig &cfg)
+void init_state(std::vector<LBMState> &S, const app::RunContext &ctx)
 {
-    S.cur = 0;
+    for (size_t i = 0; i < S.size(); ++i)
+    {
+        CUDA_CHECK(cudaSetDevice(ctx.partitions[i].device_id));
 
-    init_on_device<<<cfg.grid, cfg.block>>>(S);
-    CUDA_CHECK(cudaGetLastError());
-    CUDA_CHECK(cudaDeviceSynchronize());
+        LBMState &state = S[i];
+        state.cur = 0;
+
+        const CudaConfig cfg = make_config(state.domain.nx, state.domain.local_ny);
+
+        init_on_device<<<cfg.grid, cfg.block>>>(state);
+        CUDA_CHECK(cudaGetLastError());
+    }
+
+    for (const auto &partition : ctx.partitions)
+    {
+        CUDA_CHECK(cudaSetDevice(partition.device_id));
+        CUDA_CHECK(cudaDeviceSynchronize());
+    }
 }
 
 void upload_state_to_host(LBMState &S)
@@ -109,4 +125,13 @@ void upload_state_to_host(LBMState &S)
     CUDA_CHECK(cudaMemcpy(S.h_mxy, S.d_mxy[c], S.bytes_field, cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(S.h_myy, S.d_myy[c], S.bytes_field, cudaMemcpyDeviceToHost));
     upload_extra_state_fields(S, c);
+}
+
+void upload_state_to_host(std::vector<LBMState> &S, const app::RunContext &ctx)
+{
+    for (size_t i = 0; i < S.size(); ++i)
+    {
+        CUDA_CHECK(cudaSetDevice(ctx.partitions[i].device_id));
+        upload_state_to_host(S[i]);
+    }
 }

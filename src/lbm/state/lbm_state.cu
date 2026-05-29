@@ -1,8 +1,8 @@
 #include "lbm_state.cuh"
-#include "../../core/cuda_utils.cuh"
-#include "../../core/geometry.h"
-#include "../../core/indexing.cuh"
-#include "../../core/memory.cuh"
+#include "core/cuda_utils.cuh"
+#include "core/geometry.h"
+#include "core/indexing.cuh"
+#include "core/memory.cuh"
 
 template <int RegOrder, bool Rec, bool HighOrder>
 void allocate_extra_state_fields(LBMStateFor<RegOrder, Rec, HighOrder> &)
@@ -48,10 +48,11 @@ void free_extra_state_fields(LBMStateFor<3, false, HighOrder> &S)
     }
 }
 
-LBMState lbm_allocate_state()
+LBMState lbm_allocate_state(const LocalDomain &domain)
 {
     LBMState S{};
-    S.N = static_cast<size_t>(NX) * static_cast<size_t>(NY);
+    S.domain = domain;
+    S.N = domain.nx * domain.storage_ny;
     S.bytes_field = S.N * sizeof(real_t);
     S.cur = 0;
 
@@ -91,4 +92,42 @@ void lbm_free_state(LBMState &S)
     cudaFree2_safe(S.d_myy);
 
     free_extra_state_fields(S);
+}
+
+[[nodiscard]] __host__ std::vector<LBMState> allocate_partition_states(const app::RunContext &ctx)
+{
+    std::vector<LBMState> states;
+    states.reserve(ctx.partitions.size());
+
+    std::cout << "[MULTI_GPU] allocating " << ctx.partitions.size()
+              << " local state partitions\n";
+
+    for (const auto &partition : ctx.partitions)
+    {
+        CUDA_CHECK(cudaSetDevice(partition.device_id));
+        const LocalDomain domain = make_local_domain(partition.y_begin,
+                                                     partition.y_end,
+                                                     partition.halo);
+        states.push_back(lbm_allocate_state(domain));
+
+        std::cout << "[MULTI_GPU] device=" << partition.device_id
+                  << " y=[" << domain.y_begin << "," << domain.y_end << ")"
+                  << " local_ny=" << domain.local_ny
+                  << " halo=" << domain.halo
+                  << " storage_ny=" << domain.storage_ny
+                  << " bytes/field=" << states.back().bytes_field << "\n";
+    }
+
+    return states;
+}
+
+__host__ void free_partition_states(std::vector<LBMState> &states, const app::RunContext &ctx)
+{
+    for (size_t i = 0; i < states.size(); ++i)
+    {
+        CUDA_CHECK(cudaSetDevice(ctx.partitions[i].device_id));
+        lbm_free_state(states[i]);
+    }
+
+    states.clear();
 }

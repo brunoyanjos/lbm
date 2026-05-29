@@ -5,5 +5,5 @@
 
 namespace app
 {
-    void run(const CudaConfig &cfg, const RunContext &ctx);
+    void run(const RunContext &ctx);
 }

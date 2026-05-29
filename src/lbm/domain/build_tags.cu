@@ -1,19 +1,23 @@
 #include "build_tags.cuh"
 
-#include "../../core/geometry.h"
-#include "../../core/indexing.cuh"
-#include "../stencil_active.cuh"
-#include "../../core/cuda_utils.cuh"
+#include "app/cuda_config.cuh"
 
+#include "core/geometry.h"
+#include "core/indexing.cuh"
+#include "core/cuda_utils.cuh"
+
+#include "lbm/stencil_active.cuh"
 #include "lbm/domain/mask_utils.cuh"
 
 #include <cstdlib>
 #include <new>
+#include <vector>
 
-DomainTags domain_tags_allocate()
+DomainTags domain_tags_allocate(const LocalDomain &domain)
 {
     DomainTags T{};
-    T.N = static_cast<size_t>(NX) * static_cast<size_t>(NY);
+    T.domain = domain;
+    T.N = domain.N;
     T.bytes_valid = T.N * sizeof(mask_t);
     T.bytes_node = T.N * sizeof(uint8_t);
 
@@ -55,10 +59,11 @@ void domain_tags_free(DomainTags &T)
 }
 
 __global__ void cavity_square_tags_kernel(mask_t *__restrict__ valid,
-                                          uint8_t *__restrict__ node)
+                                          uint8_t *__restrict__ node,
+                                          LocalDomain domain)
 {
     int x, y;
-    const size_t idx = idxThreadGlobal2D(x, y);
+    const size_t idx = idxThreadLocalInterior2D(x, y, domain);
     if (idx == INVALID_INDEX)
         return;
 
@@ -96,11 +101,9 @@ __global__ void cavity_square_tags_kernel(mask_t *__restrict__ valid,
 
 void build_tags(DomainTags &T)
 {
-    dim3 block(16, 16, 1);
-    dim3 grid((NX + block.x - 1) / block.x,
-              (NY + block.y - 1) / block.y, 1);
+    CudaConfig cfg = make_config(T.domain.nx, T.domain.local_ny);
 
-    cavity_square_tags_kernel<<<grid, block>>>(T.d_valid, T.d_node);
+    cavity_square_tags_kernel<<<cfg.grid, cfg.block>>>(T.d_valid, T.d_node, T.domain);
     CUDA_CHECK(cudaGetLastError());
 
     if (T.h_valid && T.h_node)
@@ -108,4 +111,34 @@ void build_tags(DomainTags &T)
         CUDA_CHECK(cudaMemcpy(T.h_valid, T.d_valid, T.bytes_valid, cudaMemcpyDeviceToHost));
         CUDA_CHECK(cudaMemcpy(T.h_node, T.d_node, T.bytes_node, cudaMemcpyDeviceToHost));
     }
+}
+
+[[nodiscard]] __host__ std::vector<DomainTags> allocate_partition_tags(const app::RunContext &ctx)
+{
+    std::vector<DomainTags> tags;
+    tags.reserve(ctx.partitions.size());
+
+    for (const auto &partition : ctx.partitions)
+    {
+        CUDA_CHECK(cudaSetDevice(partition.device_id));
+        const LocalDomain domain = make_local_domain(partition.y_begin,
+                                                     partition.y_end,
+                                                     partition.halo);
+
+        tags.push_back(domain_tags_allocate(domain));
+        build_tags(tags.back());
+    }
+
+    return tags;
+}
+
+__host__ void free_partition_tags(std::vector<DomainTags> &tags, const app::RunContext &ctx)
+{
+    for (size_t i = 0; i < tags.size(); ++i)
+    {
+        CUDA_CHECK(cudaSetDevice(ctx.partitions[i].device_id));
+        domain_tags_free(tags[i]);
+    }
+
+    tags.clear();
 }

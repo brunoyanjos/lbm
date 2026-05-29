@@ -12,12 +12,13 @@
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <vector>
 
 namespace io
 {
     namespace
     {
-        real_t compute_ke_host_2d_impl(const LBMState &state,
+        real_t compute_ke_host_2d_impl(const std::vector<LBMState> &states,
                                        FlowAverages *averages)
         {
             real_t sum = 0.0;
@@ -30,54 +31,57 @@ namespace io
             if (sample_averages)
                 validate_flow_averages_shape(*averages);
 
-            for (int y = 0; y < NY; ++y)
+            for (const LBMState &state : states)
             {
-                for (int x = 0; x < NX; ++x)
+                for (int y_local = 0; y_local < state.domain.local_ny; ++y_local)
                 {
-                    const size_t idx = idxGlobal(x, y);
-
-                    real_t rho_E = 0.0;
-                    real_t rho_e = 0.0;
-
-                    const real_t rho = state.h_rho[idx] + RHO_0;
-                    const real_t inv_rho = r::one / rho;
-                    const real_t ux = state.h_ux[idx];
-                    const real_t uy = state.h_uy[idx];
-                    const real_t mxx = state.h_mxx[idx];
-                    const real_t mxy = state.h_mxy[idx];
-                    const real_t myy = state.h_myy[idx];
-
-                    const double uxd = static_cast<double>(ux) * inv_scale_factor<MomentId::ux>();
-                    const double uyd = static_cast<double>(uy) * inv_scale_factor<MomentId::uy>();
-
-                    if (sample_averages)
+                    for (int x = 0; x < state.domain.nx; ++x)
                     {
-                        sample_flow_averages_node(*averages, idx, uxd, uyd, next_sample);
+                        const int y_global = state.domain.y_begin + y_local;
+                        const size_t idx = idxLocal(x, y_local + state.domain.halo, state.domain.nx);
+                        const size_t global_idx = idxGlobal(x, y_global);
+
+                        real_t rho_E = 0.0;
+                        real_t rho_e = 0.0;
+
+                        const real_t rho = state.h_rho[idx] + RHO_0;
+                        const real_t inv_rho = r::one / rho;
+                        const real_t ux = state.h_ux[idx];
+                        const real_t uy = state.h_uy[idx];
+                        const real_t mxx = state.h_mxx[idx];
+                        const real_t mxy = state.h_mxy[idx];
+                        const real_t myy = state.h_myy[idx];
+
+                        const double uxd = static_cast<double>(ux) * inv_scale_factor<MomentId::ux>();
+                        const double uyd = static_cast<double>(uy) * inv_scale_factor<MomentId::uy>();
+
+                        if (sample_averages)
+                            sample_flow_averages_node(*averages, global_idx, uxd, uyd, next_sample);
+
+                        for (int i = 0; i < Stencil::Q; ++i)
+                        {
+                            const int cx = Stencil::cx(i);
+                            const int cy = Stencil::cy(i);
+
+                            const real_t fi = Stencil::w(i) * rho *
+                                              (r::one +
+                                               ux * hermite<MomentId::ux>(i) + uy * hermite<MomentId::uy>(i) +
+                                               mxx * hermite<MomentId::mxx>(i) + mxy * hermite<MomentId::mxy>(i) +
+                                               myy * hermite<MomentId::myy>(i));
+
+                            const real_t ci2 = r_cast(cx) * r_cast(cx) + r_cast(cy) * r_cast(cy);
+                            const real_t cix_ux = r_cast(cx) - static_cast<real_t>(uxd);
+                            const real_t ciy_uy = r_cast(cy) - static_cast<real_t>(uyd);
+
+                            const real_t ci_u2 = cix_ux * cix_ux + ciy_uy * ciy_uy;
+
+                            rho_E += fi * ci2 * r::half;
+                            rho_e += fi * ci_u2 * r::half;
+                        }
+
+                        sum += (rho_E - rho_e) * inv_rho;
+                        count++;
                     }
-
-                    for (int i = 0; i < Stencil::Q; ++i)
-                    {
-                        const int cx = Stencil::cx(i);
-                        const int cy = Stencil::cy(i);
-
-                        const real_t fi = Stencil::w(i) * rho *
-                                          (r::one +
-                                           ux * hermite<MomentId::ux>(i) + uy * hermite<MomentId::uy>(i) +
-                                           mxx * hermite<MomentId::mxx>(i) + mxy * hermite<MomentId::mxy>(i) +
-                                           myy * hermite<MomentId::myy>(i));
-
-                        const real_t ci2 = r_cast(cx) * r_cast(cx) + r_cast(cy) * r_cast(cy);
-                        const real_t cix_ux = r_cast(cx) - static_cast<real_t>(uxd);
-                        const real_t ciy_uy = r_cast(cy) - static_cast<real_t>(uyd);
-
-                        const real_t ci_u2 = cix_ux * cix_ux + ciy_uy * ciy_uy;
-
-                        rho_E += fi * ci2 * r::half;
-                        rho_e += fi * ci_u2 * r::half;
-                    }
-
-                    sum += (rho_E - rho_e) * inv_rho;
-                    count++;
                 }
             }
 
@@ -114,15 +118,15 @@ namespace io
         return dir.parent_path() / "outputs" / "tke.bin";
     }
 
-    real_t compute_ke_host_2d(const LBMState &state)
+    real_t compute_ke_host_2d(const std::vector<LBMState> &states)
     {
-        return compute_ke_host_2d_impl(state, nullptr);
+        return compute_ke_host_2d_impl(states, nullptr);
     }
 
-    real_t compute_ke_and_sample_flow_averages_host_2d(const LBMState &state,
+    real_t compute_ke_and_sample_flow_averages_host_2d(const std::vector<LBMState> &states,
                                                        FlowAverages &averages)
     {
-        return compute_ke_host_2d_impl(state, &averages);
+        return compute_ke_host_2d_impl(states, &averages);
     }
 
     void tke_bin_append(const std::string &out_dir, int t, double ke)

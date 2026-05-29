@@ -10,6 +10,7 @@
 #include <iomanip>
 #include <sstream>
 #include <iostream>
+#include <vector>
 
 namespace io
 {
@@ -111,6 +112,41 @@ namespace io
         file << "</VTKFile>\n";
 
         file.close();
+    }
+
+    namespace
+    {
+        void copy_local_interior_to_global(real_t *dst, const real_t *src, const LocalDomain &domain)
+        {
+            for (int y_local = 0; y_local < domain.local_ny; ++y_local)
+            {
+                const int y_global = domain.y_begin + y_local;
+                for (int x = 0; x < domain.nx; ++x)
+                {
+                    const size_t src_idx = idxLocal(x, y_local + domain.halo, domain.nx);
+                    const size_t dst_idx = idxGlobal(x, y_global);
+                    dst[dst_idx] = src[src_idx];
+                }
+            }
+        }
+    }
+
+    __host__ void write_vti(const std::vector<LBMState> &states, int step, const std::string &out_dir)
+    {
+        LBMState snapshot = lbm_allocate_state(make_local_domain(0, NY, 0));
+
+        for (const LBMState &state : states)
+        {
+            copy_local_interior_to_global(snapshot.h_rho, state.h_rho, state.domain);
+            copy_local_interior_to_global(snapshot.h_ux, state.h_ux, state.domain);
+            copy_local_interior_to_global(snapshot.h_uy, state.h_uy, state.domain);
+            copy_local_interior_to_global(snapshot.h_mxx, state.h_mxx, state.domain);
+            copy_local_interior_to_global(snapshot.h_mxy, state.h_mxy, state.domain);
+            copy_local_interior_to_global(snapshot.h_myy, state.h_myy, state.domain);
+        }
+
+        write_vti(snapshot, make_config(NX, NY), step, out_dir);
+        lbm_free_state(snapshot);
     }
 
 }

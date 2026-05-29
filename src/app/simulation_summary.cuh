@@ -11,10 +11,10 @@
 #include "../app/domain_partition.cuh"
 #include "../lbm/stencil_active.cuh"
 
-inline void print_simulation_summary(const CudaConfig &cfg,
-                                     const cudaDeviceProp &prop,
+inline void print_simulation_summary(const cudaDeviceProp &prop,
                                      const std::vector<app::DomainPartition> &partitions)
 {
+
     std::cout << "\n================ Simulation Summary ================\n";
 
     // GPU
@@ -75,25 +75,6 @@ inline void print_simulation_summary(const CudaConfig &cfg,
     std::cout << "tau               : " << TAU << "\n";
     std::cout << "omega             : " << OMEGA << "\n";
     std::cout << "rho_0             : " << RHO_0 << "\n\n";
-
-    // Kernel config
-    const size_t threads_per_block = cfg.block.x * cfg.block.y;
-
-    std::cout << "Block dim         : ("
-              << cfg.block.x << ", "
-              << cfg.block.y << ", "
-              << cfg.block.z << ")\n";
-
-    std::cout << "Grid dim          : ("
-              << cfg.grid.x << ", "
-              << cfg.grid.y << ", "
-              << cfg.grid.z << ")\n";
-
-    std::cout << "Threads / block   : "
-              << threads_per_block << "\n";
-
-    std::cout << "Shared bytes/block: "
-              << cfg.shared_bytes << " bytes\n";
 
     std::cout << "====================================================\n\n";
 }

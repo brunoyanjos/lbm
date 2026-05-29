@@ -138,12 +138,11 @@ int main(int argc, char **argv)
 
     configure_simulation_from_checkpoint(ctx);
 
-    CudaConfig cfg = make_config();
     std::cout << "CUDA primary device: " << primary_device_id << " / " << device_count << "\n";
     if (ctx.partitions.size() > 1)
         std::cout << "Multi-device partitions are planned; kernels still execute on the primary device.\n";
-    print_simulation_summary(cfg, prop, ctx.partitions);
+    print_simulation_summary(prop, ctx.partitions);
 
-    app::run(cfg, ctx);
+    app::run(ctx);
     return 0;
 }

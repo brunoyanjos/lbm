@@ -1,7 +1,10 @@
 #pragma once
 
 #include "state/lbm_state.cuh"
-#include "../app/cuda_config.cuh"
+#include "app/run_context.cuh"
 
-__host__ void init_state(LBMState &S, const CudaConfig &cfg);
+#include <vector>
+
+__host__ void init_state(std::vector<LBMState> &S, const app::RunContext &ctx);
+__host__ void upload_state_to_host(std::vector<LBMState> &S, const app::RunContext &ctx);
 __host__ void upload_state_to_host(LBMState &S);

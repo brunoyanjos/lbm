@@ -2,6 +2,7 @@
 #include "core/physics.h"
 #include "core/indexing.cuh"
 #include "core/cuda_utils.cuh"
+#include "app/cuda_config.cuh"
 
 #include "lbm/lbm_mom_step.cuh"
 #include "lbm/stencil_active.cuh"
@@ -20,7 +21,7 @@
 __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
 {
     int x, y;
-    const size_t idx = idxThreadGlobal2D(x, y);
+    const size_t idx = idxThreadLocalInterior2D(x, y, S.domain);
     if (idx == INVALID_INDEX)
         return;
 
@@ -50,7 +51,7 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
         }
         else
         {
-            load_state_moments(S, c, idxGlobal(x, y), M);
+            load_state_moments(S, c, idx, M);
 
             boundary::fluid::apply_boundary(pop, valid_ms, M);
         }
@@ -66,8 +67,25 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
     store_next_state(S, n, idx, M);
 }
 
-void lbm_mom_step(LBMState &S, const CudaConfig &cfg, const DomainTags &T)
+void lbm_mom_step(std::vector<LBMState> &S,
+                  const std::vector<DomainTags> &T,
+                  const app::RunContext &ctx)
 {
-    lbm_mom_step_kernel<<<cfg.grid, cfg.block>>>(S, T);
-    CUDA_CHECK(cudaGetLastError());
+    for (size_t i = 0; i < S.size(); ++i)
+    {
+        CUDA_CHECK(cudaSetDevice(ctx.partitions[i].device_id));
+        const CudaConfig cfg = make_config(S[i].domain.nx, S[i].domain.local_ny);
+
+        lbm_mom_step_kernel<<<cfg.grid, cfg.block>>>(S[i], T[i]);
+        CUDA_CHECK(cudaGetLastError());
+    }
+
+    for (const auto &partition : ctx.partitions)
+    {
+        CUDA_CHECK(cudaSetDevice(partition.device_id));
+        CUDA_CHECK(cudaDeviceSynchronize());
+    }
+
+    for (LBMState &state : S)
+        state.cur ^= 1;
 }

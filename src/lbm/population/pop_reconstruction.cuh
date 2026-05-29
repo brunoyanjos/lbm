@@ -20,7 +20,7 @@ __device__ __forceinline__ void reconstruct_streamed_pop(real_t *__restrict__ po
         const int cx = Stencil::cx(i);
         const int cy = Stencil::cy(i);
 
-        const size_t n_idx = idxGlobalPeriodic(x - cx, y - cy);
+        const size_t n_idx = idxLocalDomainFromGlobal(x - cx, y - cy, S.domain);
 
         const real_t rho = S.d_rho[c][n_idx] + RHO_0;
         const real_t ux = S.d_ux[c][n_idx];
@@ -48,7 +48,7 @@ __device__ __forceinline__ void reconstruct_streamed_pop(real_t *__restrict__ po
         const int cx = Stencil::cx(i);
         const int cy = Stencil::cy(i);
 
-        const size_t n_idx = idxGlobalPeriodic(x - cx, y - cy);
+        const size_t n_idx = idxLocalDomainFromGlobal(x - cx, y - cy, S.domain);
 
         const real_t rho = S.d_rho[c][n_idx] + RHO_0;
         const real_t ux = S.d_ux[c][n_idx];
@@ -88,7 +88,7 @@ __device__ __forceinline__ void reconstruct_streamed_pop(real_t *__restrict__ po
         const int cx = Stencil::cx(i);
         const int cy = Stencil::cy(i);
 
-        const size_t n_idx = idxGlobalPeriodic(x - cx, y - cy);
+        const size_t n_idx = idxLocalDomainFromGlobal(x - cx, y - cy, S.domain);
 
         const real_t rho = S.d_rho[c][n_idx] + RHO_0;
         const real_t ux = S.d_ux[c][n_idx];

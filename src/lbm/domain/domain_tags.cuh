@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <cstddef>
 
+#include "core/local_domain.cuh"
 #include "core/mask_type.cuh"
 
 enum class NodeId : uint8_t
@@ -15,6 +16,8 @@ enum class NodeId : uint8_t
 
 struct DomainTags
 {
+    LocalDomain domain;
+
     // device
     mask_t *d_valid = nullptr;
     uint8_t *d_node = nullptr;
@@ -28,5 +31,5 @@ struct DomainTags
     size_t bytes_node = 0;
 };
 
-DomainTags domain_tags_allocate();
+DomainTags domain_tags_allocate(const LocalDomain &domain);
 void domain_tags_free(DomainTags &T);

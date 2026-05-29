@@ -30,16 +30,3 @@ inline LocalDomain make_local_domain(int y_begin, int y_end, int halo)
     d.N = static_cast<size_t>(d.nx) * static_cast<size_t>(d.storage_ny);
     return d;
 }
-
-__host__ __device__ __forceinline__ size_t idxLocal(int x, int y_storage, int nx)
-{
-    return static_cast<size_t>(x) +
-           static_cast<size_t>(y_storage) * static_cast<size_t>(nx);
-}
-
-__host__ __device__ __forceinline__ int localStorageYFromGlobal(int y_global,
-                                                                int y_begin,
-                                                                int halo)
-{
-    return (y_global - y_begin) + halo;
-}

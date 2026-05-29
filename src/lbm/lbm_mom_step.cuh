@@ -1,7 +1,11 @@
 #pragma once
 
 #include "state/lbm_state.cuh"
-#include "../app/cuda_config.cuh"
+#include "../app/run_context.cuh"
 #include "domain/domain_tags.cuh"
 
-__host__ void lbm_mom_step(LBMState &S, const CudaConfig &cfg, const DomainTags &T);
+#include <vector>
+
+__host__ void lbm_mom_step(std::vector<LBMState> &S,
+                           const std::vector<DomainTags> &T,
+                           const app::RunContext &ctx);

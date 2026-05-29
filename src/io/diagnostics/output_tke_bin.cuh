@@ -7,12 +7,13 @@
 
 #include <string>
 #include <cstdint>
+#include <vector>
 
 namespace io
 {
-    real_t compute_ke_host_2d(const LBMState &state);
+    real_t compute_ke_host_2d(const std::vector<LBMState> &states);
 
-    real_t compute_ke_and_sample_flow_averages_host_2d(const LBMState &state,
+    real_t compute_ke_and_sample_flow_averages_host_2d(const std::vector<LBMState> &states,
                                                        FlowAverages &averages);
 
     void tke_bin_append(const std::string &out_dir, int t, double ke);
