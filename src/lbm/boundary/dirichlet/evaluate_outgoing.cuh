@@ -22,18 +22,24 @@ namespace boundary::dirichlet
         acc.rho.constant += OMEGA * M.ux * M.uy * moment_factor<MomentId::mxy, MomentId::rho>(i);
         acc.rho.constant += M.uy * M.uy * moment_factor<MomentId::myy, MomentId::rho>(i);
 
+        if constexpr (RegOrder >= 3 && !Rec)
+        {
+            acc.mxy.constant += M.ux * M.ux * M.uy * moment_factor<MomentId::mxxy, MomentId::mxy>(i);
+            acc.mxy.constant += M.ux * M.uy * M.uy * moment_factor<MomentId::mxyy, MomentId::mxy>(i);
+        }
+
         if constexpr (RegOrder >= 3 && Rec)
         {
-            acc.rho.constant += M.ux * M.ux * M.uy * (r_cast(2) * OMEGA - r_cast(1)) * moment_factor<MomentId::mxxy, MomentId::rho>(i);
-            acc.rho.constant += M.ux * M.uy * M.uy * (r_cast(2) * OMEGA - r_cast(1)) * moment_factor<MomentId::mxyy, MomentId::rho>(i);
+            acc.rho.constant += M.ux * M.ux * M.uy * (r::two * OMEGA - r::one) * moment_factor<MomentId::mxxy, MomentId::rho>(i);
+            acc.rho.constant += M.ux * M.uy * M.uy * (r::two * OMEGA - r::one) * moment_factor<MomentId::mxyy, MomentId::rho>(i);
         }
 
         acc.rho.mxy += (r::one - OMEGA) * moment_factor<MomentId::mxy, MomentId::rho>(i);
 
         if constexpr (RegOrder >= 3 && Rec)
         {
-            acc.rho.mxy += (r::one - OMEGA) * r_cast(2) * M.ux * moment_factor<MomentId::mxxy, MomentId::rho>(i);
-            acc.rho.mxy += (r::one - OMEGA) * r_cast(2) * M.uy * moment_factor<MomentId::mxyy, MomentId::rho>(i);
+            acc.rho.mxy += (r::one - OMEGA) * r::two * M.ux * moment_factor<MomentId::mxxy, MomentId::rho>(i);
+            acc.rho.mxy += (r::one - OMEGA) * r::two * M.uy * moment_factor<MomentId::mxyy, MomentId::rho>(i);
         }
     }
 }

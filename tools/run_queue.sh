@@ -172,6 +172,11 @@ for grid in "${grids[@]}"; do
   for stencil in "${stencils[@]}"; do
     for reg_order in "${reg_orders[@]}"; do
       for recurrence in "${recurrences[@]}"; do
+        if [[ "${reg_order}" == "2" && "${recurrence}" == "1" ]]; then
+          echo "[SKIP] REG_ORDER=2 with RECURRENCE=1 is not a valid run_queue case"
+          continue
+        fi
+
         for re in "${res[@]}"; do
           device="${devices[$((case_index % ${#devices[@]}))]}"
           ((case_index += 1))

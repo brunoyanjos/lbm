@@ -33,8 +33,8 @@ namespace boundary::dirichlet
 
         if constexpr (RegOrder >= 3 && Rec)
         {
-            acc.mxy.constant -= M.ux * M.ux * M.uy * moment_factor<MomentId::rho, MomentId::mxy>(i);
-            acc.mxy.constant -= M.ux * M.uy * M.uy * moment_factor<MomentId::rho, MomentId::mxy>(i);
+            acc.mxy.constant -= M.ux * M.ux * M.uy * moment_factor<MomentId::mxxy, MomentId::mxy>(i);
+            acc.mxy.constant -= M.ux * M.uy * M.uy * moment_factor<MomentId::mxyy, MomentId::mxy>(i);
         }
 
         acc.mxy.mxy += moment_factor<MomentId::mxy, MomentId::mxy>(i);
