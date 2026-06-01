@@ -25,6 +25,12 @@ namespace boundary::dirichlet
         acc.mxy.constant += M.ux * M.ux * moment_factor<MomentId::mxx, MomentId::mxy>(i);
         acc.mxy.constant += M.uy * M.uy * moment_factor<MomentId::myy, MomentId::mxy>(i);
 
+        if constexpr (RegOrder >= 3 && HighOrder)
+        {
+            acc.mxy.constant += M.ux * M.ux * M.ux * moment_factor<MomentId::mxxx, MomentId::mxy>(i);
+            acc.mxy.constant += M.uy * M.uy * M.uy * moment_factor<MomentId::myyy, MomentId::mxy>(i);
+        }
+
         if constexpr (RegOrder >= 3 && !Rec)
         {
             acc.mxy.constant += M.ux * M.ux * M.uy * moment_factor<MomentId::mxxy, MomentId::mxy>(i);
