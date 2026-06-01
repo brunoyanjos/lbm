@@ -296,6 +296,9 @@ case "${STENCIL}" in D2Q9|D2V17|D2V37) ;; *) die "Unknown STENCIL='${STENCIL}'" 
 case "${REAL}" in float|double) ;; *) die "Unknown REAL='${REAL}'" ;; esac
 case "${REG_ORDER}" in 2|3) ;; *) die "REG_ORDER must be 2 or 3: '${REG_ORDER}'" ;; esac
 case "${RECURRENCE}" in 0|1) ;; *) die "RECURRENCE must be 0 or 1: '${RECURRENCE}'" ;; esac
+if [[ "${RECURRENCE}" == "1" && "${REG_ORDER}" != "3" ]]; then
+  die "RECURRENCE=1 requires REG_ORDER=3"
+fi
 [[ "${NX}" =~ ^[0-9]+$ ]] || die "NX must be numeric: '${NX}'"
 [[ "${NY}" =~ ^[0-9]+$ ]] || die "NY must be numeric: '${NY}'"
 [[ "${DEVICE}" =~ ^[0-9]+$ ]] || die "DEVICE must be numeric: '${DEVICE}'"

@@ -39,6 +39,10 @@
 #error "LBM_USE_RECURRENCE must be 0 or 1"
 #endif
 
+#if LBM_USE_RECURRENCE == 1 && LBM_REG_ORDER != 3
+#error "LBM_USE_RECURRENCE requires LBM_REG_ORDER == 3"
+#endif
+
 constexpr int N_STEPS = LBM_N_STEPS;
 constexpr int SAVE_INTERVAL = LBM_SAVE_INTERVAL;
 constexpr int VTI_SAVE_INTERVAL = LBM_VTI_SAVE_INTERVAL;
