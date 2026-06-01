@@ -26,5 +26,12 @@ enum class NonlinearMomentId : int
     uxuxux,
     uxuxuy,
     uxuyuy,
-    uyuyuy
+    uyuyuy,
+
+    uxmxx,
+    uymxx,
+    uxmxy,
+    uymxy,
+    uxmyy,
+    uymyy
 };
