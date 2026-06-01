@@ -57,7 +57,7 @@ __device__ __forceinline__ void reconstruct_streamed_pop(real_t *__restrict__ po
         const real_t mxy = S.d_mxy[c][n_idx];
         const real_t myy = S.d_myy[c][n_idx];
         const real_t mxxy = ux * mxy + uy * mxx - ux * ux * uy;
-        const real_t mxyy = uy * mxy + ux * myy - ux * ux * uy;
+        const real_t mxyy = uy * mxy + ux * myy - ux * uy * uy;
 
         real_t expansion =
             r::one +
