@@ -14,9 +14,10 @@ namespace boundary::fluid
         return r_abs(x_new - x_old) / denom;
     }
 
-    __device__ __forceinline__
-        real_t
-        max_rel_step(const NodeMoments &a, const NodeMoments &b)
+    template <int RegOrder, bool Rec, bool HighOrder>
+    __device__ __forceinline__ real_t max_rel_step(
+        const NodeMomentsFor<RegOrder, Rec, HighOrder> &a,
+        const NodeMomentsFor<RegOrder, Rec, HighOrder> &b)
     {
         real_t error = rel_step(a.ux, b.ux);
         error = fmax(error, rel_step(a.uy, b.uy));
@@ -112,7 +113,7 @@ namespace boundary::fluid
 
         while (error > tol && it++ < it_max)
         {
-            const NodeMoments old = M;
+            const auto old = M;
 
             build_newton_step(G, S, M);
             gaussianElimination(G);
