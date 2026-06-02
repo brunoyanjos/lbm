@@ -81,6 +81,12 @@ namespace boundary::dirichlet
         M.mxxy = M.ux * M.ux * M.uy;
         M.mxyy = M.ux * M.uy * M.uy;
 
+        if constexpr (HighOrder)
+        {
+            M.mxxx = M.ux * M.ux * M.ux;
+            M.myyy = M.uy * M.uy * M.uy;
+        }
+
         M.rho = eval_density(acc, M);
     }
 }
