@@ -40,7 +40,7 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
     {
         bc_velocity(M, x, y);
 
-        boundary::dirichlet::apply_boundary(pop, valid_ms, M);
+        boundary::dirichlet::apply_boundary(pop, node_id, valid_ms, M);
     }
     else
     {

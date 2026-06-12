@@ -6,11 +6,16 @@
 
 enum class NodeId : uint8_t
 {
-    FLUID = 0,
-    SOLID = 1,
-    DIRICHLET = 2,
-    INLET = 3,
-    OUTLET = 4,
+    SOLID = 0,
+    NORTH = 3,
+    NORTH_EAST = 1,
+    NORTH_WEST = 2,
+    EAST = 5,
+    WEST = 10,
+    SOUTH = 12,
+    SOUTH_EAST = 4,
+    SOUTH_WEST = 8,
+    FLUID = 15,
 };
 
 struct DomainTags

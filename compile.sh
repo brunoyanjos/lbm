@@ -25,6 +25,7 @@ set -euo pipefail
 : "${RECURRENCE:=0}"
 : "${REG_ORDER:=2}"
 : "${RUN:=1}"
+: "${SYMBOLIC_BOUNDARY:=0}"
 : "${RE:=}"
 : "${RESTART:=0}"
 : "${CHECKPOINT_RUN_ID:=}"
@@ -230,6 +231,7 @@ while [[ $# -gt 0 ]]; do
     --out_root)       OUT_ROOT="$2"; shift 2 ;;
     --reg_order)      REG_ORDER="$2"; shift 2 ;;
     --recurrence)     RECURRENCE="$2"; shift 2 ;;
+    --symbolic_boundary|--symbolic-boundary) SYMBOLIC_BOUNDARY="$2"; shift 2 ;;
     --run_id)         RUN_ID="$2"; shift 2 ;;
     --io)             IO="$2"; shift 2 ;;
     --warmup)         WARMUP="$2"; shift 2 ;;
@@ -253,11 +255,13 @@ Usage:
   bash compile.sh --avg_start_t_star 500
   bash compile.sh --vti_interval 10000
   bash compile.sh --reg_order 3 --recurrence 1
+  bash compile.sh --symbolic_boundary 1
   bash compile.sh --restart 1 --checkpoint_run_id 20260525_120000_D2Q9_float_128x128 --checkpoint_t_star 900 --t_star_end 2000
 
 Regularization:
   --reg_order 2|3              Regularization order (default: 2)
   --recurrence 0|1             Use recurrence for third-order moments (default: 0)
+  --symbolic_boundary 0|1      Use symbolic boundary solver path (default: 0)
 EOF
       exit 0
       ;;
@@ -296,6 +300,7 @@ case "${STENCIL}" in D2Q9|D2V17|D2V37) ;; *) die "Unknown STENCIL='${STENCIL}'" 
 case "${REAL}" in float|double) ;; *) die "Unknown REAL='${REAL}'" ;; esac
 case "${REG_ORDER}" in 2|3) ;; *) die "REG_ORDER must be 2 or 3: '${REG_ORDER}'" ;; esac
 case "${RECURRENCE}" in 0|1) ;; *) die "RECURRENCE must be 0 or 1: '${RECURRENCE}'" ;; esac
+case "${SYMBOLIC_BOUNDARY}" in 0|1) ;; *) die "SYMBOLIC_BOUNDARY must be 0 or 1: '${SYMBOLIC_BOUNDARY}'" ;; esac
 if [[ "${RECURRENCE}" == "1" && "${REG_ORDER}" != "3" ]]; then
   die "RECURRENCE=1 requires REG_ORDER=3"
 fi
@@ -333,14 +338,19 @@ if [[ "${RECURRENCE}" == "1" ]]; then
   REC_TAG="_rec"
 fi
 
-CFG_TAG="${STENCIL}_${REAL}_${GRID_NX}x${GRID_NY}_reg${REG_ORDER}${REC_TAG}"
+SYM_TAG=""
+if [[ "${SYMBOLIC_BOUNDARY}" == "1" ]]; then
+  SYM_TAG="_symbc"
+fi
+
+CFG_TAG="${STENCIL}_${REAL}_${GRID_NX}x${GRID_NY}_reg${REG_ORDER}${REC_TAG}${SYM_TAG}"
 BUILD_DIR="${BUILD_ROOT}/${CFG_TAG}"
 OBJ_DIR="${BUILD_DIR}/obj"
 BIN_PATH="${BUILD_DIR}/${EXEC_NAME}"
 
 echo "ARCHES: ${ARCHES}"
 echo "STENCIL=${STENCIL} REAL=${REAL} GRID=${GRID_NX}x${GRID_NY} T_STAR_END=${T_STAR_END} AVG_START_T_STAR=${AVG_START_T_STAR}"
-echo "REG_ORDER=${REG_ORDER} RECURRENCE=${RECURRENCE}"
+echo "REG_ORDER=${REG_ORDER} RECURRENCE=${RECURRENCE} SYMBOLIC_BOUNDARY=${SYMBOLIC_BOUNDARY}"
 echo "DEVICE=${DEVICE}"
 if [[ "${RESTART}" == "1" ]]; then
   echo "RESTART=1 CHECKPOINT_RUN_ID=${CHECKPOINT_RUN_ID:-<direct-dir>} CHECKPOINT_DIR=${CHECKPOINT_DIR}"
@@ -394,6 +404,7 @@ esac
 
 NVCCFLAGS+=(-DLBM_NX="${GRID_NX}" -DLBM_NY="${GRID_NY}")
 NVCCFLAGS+=(-DLBM_REG_ORDER="${REG_ORDER}" -DLBM_USE_RECURRENCE="${RECURRENCE}")
+NVCCFLAGS+=(-DLBM_USE_SYMBOLIC_BOUNDARY="${SYMBOLIC_BOUNDARY}")
 
 if [[ -n "${RE}" ]]; then
   NVCCFLAGS+=(-DLBM_RE="${RE}")
@@ -482,7 +493,7 @@ if [[ "${RUN}" == "1" ]]; then
     if [[ "${RESTART}" == "1" ]]; then
       CURRENT_RUN_ID="$(date +%Y%m%d_%H%M%S)_restart_${CHECKPOINT_RUN_ID:-checkpoint}"
     else
-      CURRENT_RUN_ID="$(date +%Y%m%d_%H%M%S)_${STENCIL}_${REAL}_${GRID_NX}x${GRID_NY}_reg${REG_ORDER}${REC_TAG}${RE:+_RE${RE}}"
+      CURRENT_RUN_ID="$(date +%Y%m%d_%H%M%S)_${STENCIL}_${REAL}_${GRID_NX}x${GRID_NY}_reg${REG_ORDER}${REC_TAG}${SYM_TAG}${RE:+_RE${RE}}"
     fi
   else
     CURRENT_RUN_ID="${RUN_ID}"

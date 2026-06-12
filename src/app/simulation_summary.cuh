@@ -37,7 +37,8 @@ inline void print_simulation_summary(const CudaConfig &cfg,
 
     // Regularization
     std::cout << "Regularization    : order " << REG_ORDER << "\n";
-    std::cout << "Recurrence        : " << (USE_RECURRENCE ? "on" : "off") << "\n\n";
+    std::cout << "Recurrence        : " << (USE_RECURRENCE ? "on" : "off") << "\n";
+    std::cout << "Symbolic boundary : " << (USE_SYMBOLIC_BOUNDARY ? "on" : "off") << "\n\n";
 
     // Domain
     std::cout << "Domain size       : "

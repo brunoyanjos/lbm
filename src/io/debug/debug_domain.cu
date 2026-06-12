@@ -54,18 +54,28 @@ namespace
         return false;
     }
 
-    static inline char node_char(uint8_t node_id, uint8_t FLUID, uint8_t SOLID, uint8_t DIRICHLET, uint8_t INLET, uint8_t OUTLET)
+    static inline char node_char(uint8_t node_id)
     {
-        if (node_id == SOLID)
+        if (node_id == to_u8(NodeId::SOLID))
             return 'S';
-        if (node_id == DIRICHLET)
-            return 'D';
-        if (node_id == INLET)
-            return 'I';
-        if (node_id == OUTLET)
-            return 'O';
-        if (node_id == FLUID)
+        if (node_id == to_u8(NodeId::FLUID))
             return 'F';
+        if (node_id == to_u8(NodeId::NORTH))
+            return 'N';
+        if (node_id == to_u8(NodeId::SOUTH))
+            return 'S';
+        if (node_id == to_u8(NodeId::EAST))
+            return 'E';
+        if (node_id == to_u8(NodeId::WEST))
+            return 'W';
+        if (node_id == to_u8(NodeId::NORTH_EAST))
+            return '1';
+        if (node_id == to_u8(NodeId::NORTH_WEST))
+            return '2';
+        if (node_id == to_u8(NodeId::SOUTH_EAST))
+            return '3';
+        if (node_id == to_u8(NodeId::SOUTH_WEST))
+            return '4';
         return '?';
     }
 }
@@ -91,16 +101,13 @@ namespace io
         // ajuste esses casts/ids conforme seu enum NodeId
         const uint8_t FLUID = to_u8(NodeId::FLUID);
         const uint8_t SOLID = to_u8(NodeId::SOLID);
-        const uint8_t DIRICHLET = to_u8(NodeId::DIRICHLET);
-        const uint8_t INLET = to_u8(NodeId::INLET);
-        const uint8_t OUTLET = to_u8(NodeId::OUTLET);
 
         const mask_t FM = full_mask_host();
 
         if (print_domain)
         {
             std::printf("\n=== DOMAIN (NY=%d, NX=%d) ===\n", int(NY), int(NX));
-            std::printf("Legend: F=FLUID, S=SOLID, D=DIRICHLET\n\n");
+            std::printf("Legend: F=FLUID, N/S/E/W=edges, 1=NE, 2=NW, 3=SE, 4=SW\n\n");
 
             // imprime com y decrescente para o "topo" aparecer em cima
             for (int y = int(NY) - 1; y >= 0; --y)
@@ -109,7 +116,7 @@ namespace io
                 for (int x = 0; x < int(NX); ++x)
                 {
                     const size_t idx = size_t(x) + size_t(NX) * size_t(y);
-                    const char c = node_char(nodes[idx], FLUID, SOLID, DIRICHLET, INLET, OUTLET);
+                    const char c = node_char(nodes[idx]);
                     std::printf("%c", c);
                 }
                 std::printf("\n");
@@ -126,7 +133,7 @@ namespace io
 
         if (print_masks)
         {
-            std::printf("=== PARTIAL VALID MASKS (fluid near solid, excluding dirichlet) ===\n");
+            std::printf("=== PARTIAL VALID MASKS (fluid near solid, excluding boundary nodes) ===\n");
             std::printf("Mask bits order: i=0..Q-1 (Q=%d)\n\n", int(Stencil::Q));
 
             int printed = 0;
@@ -139,8 +146,6 @@ namespace io
                     const size_t idx = size_t(x) + size_t(NX) * size_t(y);
                     const uint8_t nid = nodes[idx];
 
-                    if (nid == DIRICHLET)
-                        continue; // você pediu: não precisa no dirichlet
                     if (nid != FLUID)
                         continue;
 

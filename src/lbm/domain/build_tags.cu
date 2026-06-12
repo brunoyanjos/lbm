@@ -67,12 +67,24 @@ __global__ void cavity_square_tags_kernel(mask_t *__restrict__ valid,
     const bool on_bottom = (y == 0);
     const bool on_top = (y == NY - 1);
 
-    const int bc_count = int(on_left) + int(on_right) + int(on_bottom) + int(on_top);
-
     uint8_t wid = to_u8(NodeId::FLUID);
 
-    if (bc_count > 0)
-        wid = to_u8(NodeId::DIRICHLET);
+    if (on_top && on_right)
+        wid = to_u8(NodeId::NORTH_EAST);
+    else if (on_top && on_left)
+        wid = to_u8(NodeId::NORTH_WEST);
+    else if (on_bottom && on_right)
+        wid = to_u8(NodeId::SOUTH_EAST);
+    else if (on_bottom && on_left)
+        wid = to_u8(NodeId::SOUTH_WEST);
+    else if (on_top)
+        wid = to_u8(NodeId::NORTH);
+    else if (on_right)
+        wid = to_u8(NodeId::EAST);
+    else if (on_bottom)
+        wid = to_u8(NodeId::SOUTH);
+    else if (on_left)
+        wid = to_u8(NodeId::WEST);
 
     node[idx] = wid;
 

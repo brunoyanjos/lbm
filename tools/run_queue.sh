@@ -18,6 +18,7 @@ Options:
   --re VALUE[,VALUE...]       Reynolds number(s) (default: 100,400,1000,3200,5000,7500,10000)
   --reg_order VALUE[,VALUE...] Regularization order(s), 2 or 3 (default: 2)
   --recurrence VALUE[,VALUE...] Recurrence flag(s), 0 or 1 (default: 0)
+  --symbolic_boundary VALUE[,VALUE...] Symbolic boundary flag(s), 0 or 1 (default: 0)
   --device VALUE[,VALUE...]   CUDA device id(s), assigned round-robin (default: 0)
   --t_final VALUE             Final t* passed to compile.sh --t_star_end (default: ${T_FINAL})
   --dry-run                   Print commands without running them
@@ -67,6 +68,7 @@ res=()
 devices=()
 reg_orders=()
 recurrences=()
+symbolic_boundaries=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -88,6 +90,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --recurrence)
       append_csv_values recurrences "$2"
+      shift 2
+      ;;
+    --symbolic_boundary|--symbolic-boundary)
+      append_csv_values symbolic_boundaries "$2"
       shift 2
       ;;
     --device|--devices)
@@ -140,6 +146,10 @@ if ((${#recurrences[@]} == 0)); then
   recurrences=("0")
 fi
 
+if ((${#symbolic_boundaries[@]} == 0)); then
+  symbolic_boundaries=("0")
+fi
+
 if ((${#devices[@]} == 0)); then
   devices=("0")
 fi
@@ -154,6 +164,13 @@ done
 for recurrence in "${recurrences[@]}"; do
   [[ "${recurrence}" =~ ^[01]$ ]] || {
     echo "Error: recurrence must be 0 or 1: '${recurrence}'" >&2
+    exit 1
+  }
+done
+
+for symbolic_boundary in "${symbolic_boundaries[@]}"; do
+  [[ "${symbolic_boundary}" =~ ^[01]$ ]] || {
+    echo "Error: symbolic_boundary must be 0 or 1: '${symbolic_boundary}'" >&2
     exit 1
   }
 done
@@ -177,41 +194,49 @@ for grid in "${grids[@]}"; do
           continue
         fi
 
-        for re in "${res[@]}"; do
-          device="${devices[$((case_index % ${#devices[@]}))]}"
-          ((case_index += 1))
+        for symbolic_boundary in "${symbolic_boundaries[@]}"; do
+          for re in "${res[@]}"; do
+            device="${devices[$((case_index % ${#devices[@]}))]}"
+            ((case_index += 1))
 
-          rec_tag=""
-          if [[ "${recurrence}" == "1" ]]; then
-            rec_tag="_rec"
-          fi
+            rec_tag=""
+            if [[ "${recurrence}" == "1" ]]; then
+              rec_tag="_rec"
+            fi
 
-          ts="$(date +%Y%m%d_%H%M%S)"
-          run_id="${ts}_${stencil}_${GRID_NX}x${GRID_NY}_reg${reg_order}${rec_tag}_RE${re}_T${T_FINAL}_GPU${device}"
+            sym_tag=""
+            if [[ "${symbolic_boundary}" == "1" ]]; then
+              sym_tag="_symbc"
+            fi
 
-          echo "================================================="
-          echo "[CASE] STENCIL=${stencil}  REG_ORDER=${reg_order}  RECURRENCE=${recurrence}  RE=${re}  GRID=${GRID_NX}x${GRID_NY}  T_FINAL=${T_FINAL}  DEVICE=${device}  RUN_ID=${run_id}"
-          echo "================================================="
+            ts="$(date +%Y%m%d_%H%M%S)"
+            run_id="${ts}_${stencil}_${GRID_NX}x${GRID_NY}_reg${reg_order}${rec_tag}${sym_tag}_RE${re}_T${T_FINAL}_GPU${device}"
 
-          cmd=(bash "${ROOT_DIR}/compile.sh" \
-            --stencil "${stencil}" \
-            --reg_order "${reg_order}" \
-            --recurrence "${recurrence}" \
-            --re "${re}" \
-            --grid "${GRID_NX}x${GRID_NY}" \
-            --device "${device}" \
-            --t_star_end "${T_FINAL}" \
-            --run_id "${run_id}")
+            echo "================================================="
+            echo "[CASE] STENCIL=${stencil}  REG_ORDER=${reg_order}  RECURRENCE=${recurrence}  SYMBOLIC_BOUNDARY=${symbolic_boundary}  RE=${re}  GRID=${GRID_NX}x${GRID_NY}  T_FINAL=${T_FINAL}  DEVICE=${device}  RUN_ID=${run_id}"
+            echo "================================================="
 
-          if [[ "${DRY_RUN}" == "1" ]]; then
-            printf '[DRY_RUN]'
-            printf ' %q' "${cmd[@]}"
-            printf '\n'
-          else
-            "${cmd[@]}"
-          fi
+            cmd=(bash "${ROOT_DIR}/compile.sh" \
+              --stencil "${stencil}" \
+              --reg_order "${reg_order}" \
+              --recurrence "${recurrence}" \
+              --symbolic_boundary "${symbolic_boundary}" \
+              --re "${re}" \
+              --grid "${GRID_NX}x${GRID_NY}" \
+              --device "${device}" \
+              --t_star_end "${T_FINAL}" \
+              --run_id "${run_id}")
 
-          echo
+            if [[ "${DRY_RUN}" == "1" ]]; then
+              printf '[DRY_RUN]'
+              printf ' %q' "${cmd[@]}"
+              printf '\n'
+            else
+              "${cmd[@]}"
+            fi
+
+            echo
+          done
         done
       done
     done
