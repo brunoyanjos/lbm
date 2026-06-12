@@ -110,14 +110,14 @@ namespace boundary::dirichlet
             M.mxx = M.ux * M.ux;
             M.myy = M.uy * M.uy;
 
-            M.rho = -static_cast<real_t>(36) * (rho_I - mxy_I * rho_I + mxy_I * rho_I * OMEGA) /
-                    (-static_cast<real_t>(24) + static_cast<real_t>(18) * M.ux +
-                     static_cast<real_t>(4) * M.ux * M.ux - OMEGA - static_cast<real_t>(3) * M.ux * OMEGA +
-                     static_cast<real_t>(11) * M.ux * M.ux * OMEGA);
+            M.rho = static_cast<real_t>(36) * (rho_I - mxy_I * rho_I + mxy_I * rho_I * OMEGA) /
+                    (static_cast<real_t>(24) - static_cast<real_t>(18) * M.ux -
+                     static_cast<real_t>(18) * M.ux * M.ux + OMEGA + static_cast<real_t>(3) * M.ux * OMEGA +
+                     static_cast<real_t>(3) * M.ux * M.ux * OMEGA);
 
-            M.mxy = (static_cast<real_t>(108) * mxy_I * rho_I - static_cast<real_t>(3) * M.rho -
-                     static_cast<real_t>(9) * M.ux * M.rho - static_cast<real_t>(2) * M.ux * M.ux * M.rho) /
-                    (static_cast<real_t>(27) * M.rho);
+            M.mxy = (static_cast<real_t>(36) * mxy_I * rho_I - M.rho -
+                     static_cast<real_t>(3) * M.ux * M.rho - static_cast<real_t>(3) * M.ux * M.ux * M.rho) /
+                    (static_cast<real_t>(9) * M.rho);
 
             break;
         }
@@ -132,14 +132,14 @@ namespace boundary::dirichlet
             M.mxx = M.ux * M.ux;
             M.myy = M.uy * M.uy;
 
-            M.rho = static_cast<real_t>(36) * (-rho_I - mxy_I * rho_I + mxy_I * rho_I * OMEGA) /
-                    (-static_cast<real_t>(24) - static_cast<real_t>(18) * M.ux +
-                     static_cast<real_t>(4) * M.ux * M.ux - OMEGA + static_cast<real_t>(3) * M.ux * OMEGA +
-                     static_cast<real_t>(11) * M.ux * M.ux * OMEGA);
+            M.rho = -static_cast<real_t>(36) * (-rho_I - mxy_I * rho_I + mxy_I * rho_I * OMEGA) /
+                    (static_cast<real_t>(24) + static_cast<real_t>(18) * M.ux -
+                     static_cast<real_t>(18) * M.ux * M.ux + OMEGA - static_cast<real_t>(3) * M.ux * OMEGA +
+                     static_cast<real_t>(3) * M.ux * M.ux * OMEGA);
 
-            M.mxy = (static_cast<real_t>(108) * mxy_I * rho_I + static_cast<real_t>(3) * M.rho -
-                     static_cast<real_t>(9) * M.ux * M.rho + static_cast<real_t>(2) * M.ux * M.ux * M.rho) /
-                    (static_cast<real_t>(27) * M.rho);
+            M.mxy = (static_cast<real_t>(36) * mxy_I * rho_I + M.rho -
+                     static_cast<real_t>(3) * M.ux * M.rho + static_cast<real_t>(3) * M.ux * M.ux * M.rho) /
+                    (static_cast<real_t>(9) * M.rho);
 
             break;
         }
@@ -211,12 +211,17 @@ namespace boundary::dirichlet
         {
             // south-east corner formula
             const real_t rho_I = pop[0] + pop[1] + pop[4] + pop[8];
+            const real_t inv_rho_I = r::one / rho_I;
+
+            const real_t mxy_I = -pop[8] * inv_rho_I;
 
             M.mxx = M.ux * M.ux;
             M.mxy = M.ux * M.uy;
             M.myy = M.uy * M.uy;
 
-            M.rho = static_cast<real_t>(36) * rho_I / static_cast<real_t>(25);
+            M.rho = -static_cast<real_t>(36) * (-rho_I - mxy_I * rho_I + mxy_I * rho_I * OMEGA) /
+                    (static_cast<real_t>(24) + OMEGA);
+            M.mxy = (static_cast<real_t>(36) * mxy_I * rho_I + M.rho) / (static_cast<real_t>(24) + OMEGA);
 
             break;
         }
@@ -224,12 +229,16 @@ namespace boundary::dirichlet
         {
             // south-west corner formula
             const real_t rho_I = pop[0] + pop[3] + pop[4] + pop[7];
+            const real_t inv_rho_I = r::one / rho_I;
+
+            const real_t mxy_I = pop[7] * inv_rho_I;
 
             M.mxx = M.ux * M.ux;
-            M.mxy = M.ux * M.uy;
             M.myy = M.uy * M.uy;
 
-            M.rho = static_cast<real_t>(36) * rho_I / static_cast<real_t>(25);
+            M.rho = static_cast<real_t>(36) * (rho_I - mxy_I * rho_I + mxy_I * rho_I * OMEGA) /
+                    (static_cast<real_t>(24) + OMEGA);
+            M.mxy = (static_cast<real_t>(36) * mxy_I * rho_I - M.rho) / (static_cast<real_t>(24) + OMEGA);
 
             break;
         }
