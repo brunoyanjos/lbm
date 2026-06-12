@@ -6,6 +6,7 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 : "${DRY_RUN:=0}"
 : "${T_FINAL:=2000}"
+: "${REAL:=float}"
 
 show_help() {
   cat <<EOF
@@ -14,6 +15,7 @@ Usage:
 
 Options:
   --stencil VALUE[,VALUE...]  Stencil(s) to run (default: D2Q9)
+  --real VALUE[,VALUE...]     Precision(s), float or double (default: ${REAL})
   --grid VALUE[,VALUE...]     Grid size(s), N or NXxNY (default: 512)
   --re VALUE[,VALUE...]       Reynolds number(s) (default: 100,400,1000,3200,5000,7500,10000)
   --reg_order VALUE[,VALUE...] Regularization order(s), 2 or 3 (default: 2)
@@ -60,9 +62,9 @@ export RDC=0
 export PROGRESS=1
 export PROGRESS_HZ=2
 export WARMUP=100
-export REAL=float   # ou double se quiser
 
 stencils=()
+reals=()
 grids=()
 res=()
 devices=()
@@ -74,6 +76,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --stencil)
       append_csv_values stencils "$2"
+      shift 2
+      ;;
+    --real|--precision)
+      append_csv_values reals "$2"
       shift 2
       ;;
     --grid)
@@ -129,6 +135,10 @@ if ((${#stencils[@]} == 0)); then
   stencils=("D2Q9")
 fi
 
+if ((${#reals[@]} == 0)); then
+  reals=("${REAL}")
+fi
+
 # Tamanhos de grid. Use "256" para 256x256, ou "512x256" para retangular.
 if ((${#grids[@]} == 0)); then
   grids=("512")
@@ -161,6 +171,13 @@ for reg_order in "${reg_orders[@]}"; do
   }
 done
 
+for real in "${reals[@]}"; do
+  [[ "${real}" == "float" || "${real}" == "double" ]] || {
+    echo "Error: real must be float or double: '${real}'" >&2
+    exit 1
+  }
+done
+
 for recurrence in "${recurrences[@]}"; do
   [[ "${recurrence}" =~ ^[01]$ ]] || {
     echo "Error: recurrence must be 0 or 1: '${recurrence}'" >&2
@@ -187,55 +204,58 @@ for grid in "${grids[@]}"; do
   parse_grid "${grid}"
 
   for stencil in "${stencils[@]}"; do
-    for reg_order in "${reg_orders[@]}"; do
-      for recurrence in "${recurrences[@]}"; do
-        if [[ "${reg_order}" == "2" && "${recurrence}" == "1" ]]; then
-          echo "[SKIP] REG_ORDER=2 with RECURRENCE=1 is not a valid run_queue case"
-          continue
-        fi
+    for real in "${reals[@]}"; do
+      for reg_order in "${reg_orders[@]}"; do
+        for recurrence in "${recurrences[@]}"; do
+          if [[ "${reg_order}" == "2" && "${recurrence}" == "1" ]]; then
+            echo "[SKIP] REG_ORDER=2 with RECURRENCE=1 is not a valid run_queue case"
+            continue
+          fi
 
-        for symbolic_boundary in "${symbolic_boundaries[@]}"; do
-          for re in "${res[@]}"; do
-            device="${devices[$((case_index % ${#devices[@]}))]}"
-            ((case_index += 1))
+          for symbolic_boundary in "${symbolic_boundaries[@]}"; do
+            for re in "${res[@]}"; do
+              device="${devices[$((case_index % ${#devices[@]}))]}"
+              ((case_index += 1))
 
-            rec_tag=""
-            if [[ "${recurrence}" == "1" ]]; then
-              rec_tag="_rec"
-            fi
+              rec_tag=""
+              if [[ "${recurrence}" == "1" ]]; then
+                rec_tag="_rec"
+              fi
 
-            sym_tag=""
-            if [[ "${symbolic_boundary}" == "1" ]]; then
-              sym_tag="_symbc"
-            fi
+              sym_tag=""
+              if [[ "${symbolic_boundary}" == "1" ]]; then
+                sym_tag="_symbc"
+              fi
 
-            ts="$(date +%Y%m%d_%H%M%S)"
-            run_id="${ts}_${stencil}_${GRID_NX}x${GRID_NY}_reg${reg_order}${rec_tag}${sym_tag}_RE${re}_T${T_FINAL}_GPU${device}"
+              ts="$(date +%Y%m%d_%H%M%S)"
+              run_id="${ts}_${stencil}_${real}_${GRID_NX}x${GRID_NY}_reg${reg_order}${rec_tag}${sym_tag}_RE${re}_T${T_FINAL}_GPU${device}"
 
-            echo "================================================="
-            echo "[CASE] STENCIL=${stencil}  REG_ORDER=${reg_order}  RECURRENCE=${recurrence}  SYMBOLIC_BOUNDARY=${symbolic_boundary}  RE=${re}  GRID=${GRID_NX}x${GRID_NY}  T_FINAL=${T_FINAL}  DEVICE=${device}  RUN_ID=${run_id}"
-            echo "================================================="
+              echo "================================================="
+              echo "[CASE] STENCIL=${stencil}  REAL=${real}  REG_ORDER=${reg_order}  RECURRENCE=${recurrence}  SYMBOLIC_BOUNDARY=${symbolic_boundary}  RE=${re}  GRID=${GRID_NX}x${GRID_NY}  T_FINAL=${T_FINAL}  DEVICE=${device}  RUN_ID=${run_id}"
+              echo "================================================="
 
-            cmd=(bash "${ROOT_DIR}/compile.sh" \
-              --stencil "${stencil}" \
-              --reg_order "${reg_order}" \
-              --recurrence "${recurrence}" \
-              --symbolic_boundary "${symbolic_boundary}" \
-              --re "${re}" \
-              --grid "${GRID_NX}x${GRID_NY}" \
-              --device "${device}" \
-              --t_star_end "${T_FINAL}" \
-              --run_id "${run_id}")
+              cmd=(bash "${ROOT_DIR}/compile.sh" \
+                --stencil "${stencil}" \
+                --real "${real}" \
+                --reg_order "${reg_order}" \
+                --recurrence "${recurrence}" \
+                --symbolic_boundary "${symbolic_boundary}" \
+                --re "${re}" \
+                --grid "${GRID_NX}x${GRID_NY}" \
+                --device "${device}" \
+                --t_star_end "${T_FINAL}" \
+                --run_id "${run_id}")
 
-            if [[ "${DRY_RUN}" == "1" ]]; then
-              printf '[DRY_RUN]'
-              printf ' %q' "${cmd[@]}"
-              printf '\n'
-            else
-              "${cmd[@]}"
-            fi
+              if [[ "${DRY_RUN}" == "1" ]]; then
+                printf '[DRY_RUN]'
+                printf ' %q' "${cmd[@]}"
+                printf '\n'
+              else
+                "${cmd[@]}"
+              fi
 
-            echo
+              echo
+            done
           done
         done
       done
