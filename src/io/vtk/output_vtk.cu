@@ -53,7 +53,7 @@ namespace io
             for (int x = 0; x < nx; ++x)
             {
                 const size_t idx = idxGlobal(x, y);
-                const real_t rho = S.h_rho[idx] + RHO_0;
+                const real_t rho = S.h_rho[idx];// + RHO_0;
                 file << "          " << static_cast<float>(rho) << "\n";
             }
         }

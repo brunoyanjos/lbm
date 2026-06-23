@@ -22,18 +22,28 @@ __device__ __forceinline__ void reconstruct_streamed_pop(real_t *__restrict__ po
 
         const size_t n_idx = idxGlobalPeriodic(x - cx, y - cy);
 
-        const real_t rho = S.d_rho[c][n_idx] + RHO_0;
+        const real_t rho = S.d_rho[c][n_idx];// + RHO_0;
         const real_t ux = S.d_ux[c][n_idx];
         const real_t uy = S.d_uy[c][n_idx];
         const real_t mxx = S.d_mxx[c][n_idx];
         const real_t mxy = S.d_mxy[c][n_idx];
         const real_t myy = S.d_myy[c][n_idx];
-
+/*
         pop[i] = Stencil::w(i) * rho *
                  (r::one +
                   ux * hermite<MomentId::ux>(i) + uy * hermite<MomentId::uy>(i) +
                   mxx * hermite<MomentId::mxx>(i) + mxy * hermite<MomentId::mxy>(i) +
-                  myy * hermite<MomentId::myy>(i));
+                  myy * hermite<MomentId::myy>(i) ) - Stencil::w(i);
+*/
+const real_t H =
+      ux  * hermite<MomentId::ux>(i)
+    + uy  * hermite<MomentId::uy>(i)
+    + mxx * hermite<MomentId::mxx>(i)
+    + mxy * hermite<MomentId::mxy>(i)
+    + myy * hermite<MomentId::myy>(i);
+
+pop[i] = Stencil::w(i) * ((rho - r::one) + rho * H);
+
     }
 }
 
@@ -50,7 +60,7 @@ __device__ __forceinline__ void reconstruct_streamed_pop(real_t *__restrict__ po
 
         const size_t n_idx = idxGlobalPeriodic(x - cx, y - cy);
 
-        const real_t rho = S.d_rho[c][n_idx] + RHO_0;
+        const real_t rho = S.d_rho[c][n_idx];// + RHO_0;
         const real_t ux = S.d_ux[c][n_idx];
         const real_t uy = S.d_uy[c][n_idx];
         const real_t mxx = S.d_mxx[c][n_idx];
@@ -58,7 +68,7 @@ __device__ __forceinline__ void reconstruct_streamed_pop(real_t *__restrict__ po
         const real_t myy = S.d_myy[c][n_idx];
         const real_t mxxy = ux * mxy + uy * mxx - ux * ux * uy;
         const real_t mxyy = uy * mxy + ux * myy - ux * uy * uy;
-
+/*
         real_t expansion =
             r::one +
             ux * hermite<MomentId::ux>(i) + uy * hermite<MomentId::uy>(i) +
@@ -72,8 +82,23 @@ __device__ __forceinline__ void reconstruct_streamed_pop(real_t *__restrict__ po
             const real_t myyy = uy * myy - r::third * uy * uy * uy;
             expansion += mxxx * hermite<MomentId::mxxx>(i) + myyy * hermite<MomentId::myyy>(i);
         }
+*/
+//        pop[i] = Stencil::w(i) * rho * expansion;
+//	pop[i] -= Stencil::w(i);
 
-        pop[i] = Stencil::w(i) * rho * expansion;
+
+const real_t H =
+      ux  * hermite<MomentId::ux>(i)
+    + uy  * hermite<MomentId::uy>(i)
+    + mxx * hermite<MomentId::mxx>(i)
+    + mxy * hermite<MomentId::mxy>(i)
+    + myy * hermite<MomentId::myy>(i)
+    + mxxy * hermite<MomentId::mxxy>(i)
+    + mxyy * hermite<MomentId::mxyy>(i);
+
+pop[i] = Stencil::w(i) * ((rho - r::one) + rho * H);
+
+
     }
 }
 
@@ -90,7 +115,7 @@ __device__ __forceinline__ void reconstruct_streamed_pop(real_t *__restrict__ po
 
         const size_t n_idx = idxGlobalPeriodic(x - cx, y - cy);
 
-        const real_t rho = S.d_rho[c][n_idx] + RHO_0;
+        const real_t rho = S.d_rho[c][n_idx];// + RHO_0;
         const real_t ux = S.d_ux[c][n_idx];
         const real_t uy = S.d_uy[c][n_idx];
         const real_t mxx = S.d_mxx[c][n_idx];
@@ -114,5 +139,6 @@ __device__ __forceinline__ void reconstruct_streamed_pop(real_t *__restrict__ po
         }
 
         pop[i] = Stencil::w(i) * rho * expansion;
+	pop[i] -= Stencil::w(i);
     }
 }

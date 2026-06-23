@@ -10,7 +10,7 @@ __device__ __forceinline__ void store_next_state(const LBMStateFor<RegOrder, Rec
                                                  size_t idx,
                                                  const NodeMomentsFor<RegOrder, Rec, HighOrder> &M)
 {
-    S.d_rho[n][idx] = M.rho - RHO_0;
+    S.d_rho[n][idx] = M.rho;// - RHO_0;
     S.d_ux[n][idx] = M.ux;
     S.d_uy[n][idx] = M.uy;
     S.d_mxx[n][idx] = M.mxx;
@@ -24,7 +24,7 @@ __device__ __forceinline__ void store_next_state(const LBMStateFor<3, false, Hig
                                                  size_t idx,
                                                  const NodeMomentsFor<3, false, HighOrder> &M)
 {
-    S.d_rho[n][idx] = M.rho - RHO_0;
+    S.d_rho[n][idx] = M.rho;// - RHO_0;
     S.d_ux[n][idx] = M.ux;
     S.d_uy[n][idx] = M.uy;
     S.d_mxx[n][idx] = M.mxx;

@@ -16,8 +16,8 @@ namespace boundary::dirichlet
                                                       const NodeMomentsFor<RegOrder, Rec, HighOrder> &M,
                                                       const real_t *__restrict__ pop, int i)
     {
-        acc.in.rho += pop[i];
-        acc.in.mxy += pop[i] * hermite<MomentId::mxy>(i);
+        acc.in.rho += (pop[i] + Stencil::w(i) );
+        acc.in.mxy += (pop[i] + Stencil::w(i) ) * hermite<MomentId::mxy>(i);
 
         acc.mxy.constant += moment_factor<MomentId::rho, MomentId::mxy>(i);
         acc.mxy.constant += M.ux * moment_factor<MomentId::ux, MomentId::mxy>(i);

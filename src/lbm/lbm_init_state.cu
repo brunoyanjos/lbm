@@ -64,7 +64,7 @@ __global__ void init_on_device(LBMState S)
 
     const int c = S.cur;
 
-    S.d_rho[c][idx] = rho - RHO_0;
+    S.d_rho[c][idx] = rho;// - RHO_0;
     S.d_ux[c][idx] = ux * Stencil::as2;
     S.d_uy[c][idx] = uy * Stencil::as2;
 

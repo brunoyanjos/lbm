@@ -20,7 +20,7 @@ __device__ __forceinline__ void evaluate_moments_from_pop(const real_t *__restri
 #pragma unroll
     for (int i = 0; i < Stencil::Q; ++i)
     {
-        const real_t fi = pop[i];
+        const real_t fi = (pop[i] + Stencil::w(i));
 
         M.rho += fi;
 
@@ -62,7 +62,7 @@ __device__ __forceinline__ void evaluate_moments_from_pop(const real_t *__restri
 #pragma unroll
     for (int i = 0; i < Stencil::Q; ++i)
     {
-        const real_t fi = pop[i];
+        const real_t fi = pop[i] + Stencil::w(i);
 
         M.rho += fi;
 
