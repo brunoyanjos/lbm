@@ -27,7 +27,7 @@ namespace boundary::fluid
         }
     };
 
-    struct DensityEqAccumulatorSecondOrder
+    struct DensityEqAccumulator
     {
         real_t rho = r::zero;
 
@@ -43,32 +43,7 @@ namespace boundary::fluid
         real_t myy = r::zero;
     };
 
-    template <int RegOrder, bool Rec>
-    struct DensityEqAccumulator : DensityEqAccumulatorSecondOrder
-    {
-    };
-
-    template <>
-    struct DensityEqAccumulator<3, false> : DensityEqAccumulatorSecondOrder
-    {
-        real_t uxuxux = r::zero;
-        real_t uxuxuy = r::zero;
-        real_t uxuyuy = r::zero;
-        real_t uyuyuy = r::zero;
-    };
-
-    template <>
-    struct DensityEqAccumulator<3, true> : DensityEqAccumulator<3, false>
-    {
-        real_t uxmxx = r::zero;
-        real_t uymxx = r::zero;
-        real_t uxmyy = r::zero;
-        real_t uymyy = r::zero;
-        real_t uxmxy = r::zero;
-        real_t uymxy = r::zero;
-    };
-
-    struct SecondOrderMomentEqAccumulatorSecondOrder
+    struct SecondOrderMomentEqAccumulator
     {
         real_t rho = r::zero;
 
@@ -80,43 +55,17 @@ namespace boundary::fluid
         real_t myy = r::zero;
     };
 
-    template <int RegOrder, bool Rec>
-    struct SecondOrderMomentEqAccumulator : SecondOrderMomentEqAccumulatorSecondOrder
-    {
-    };
-
-    template <>
-    struct SecondOrderMomentEqAccumulator<3, false> : SecondOrderMomentEqAccumulatorSecondOrder
-    {
-        real_t uxuxux = r::zero;
-        real_t uxuxuy = r::zero;
-        real_t uxuyuy = r::zero;
-        real_t uyuyuy = r::zero;
-    };
-
-    template <>
-    struct SecondOrderMomentEqAccumulator<3, true> : SecondOrderMomentEqAccumulator<3, false>
-    {
-        real_t uxmxx = r::zero;
-        real_t uymxx = r::zero;
-        real_t uxmyy = r::zero;
-        real_t uymyy = r::zero;
-        real_t uxmxy = r::zero;
-        real_t uymxy = r::zero;
-    };
-
-    template <int RegOrder, bool Rec>
     struct Accumulator
     {
         IncomingMomentAccumulator in;
 
-        DensityEqAccumulator<RegOrder, Rec> rho;
+        DensityEqAccumulator rho;
 
-        SecondOrderMomentEqAccumulator<RegOrder, Rec> ux;
-        SecondOrderMomentEqAccumulator<RegOrder, Rec> uy;
+        SecondOrderMomentEqAccumulator ux;
+        SecondOrderMomentEqAccumulator uy;
 
-        SecondOrderMomentEqAccumulator<RegOrder, Rec> mxx;
-        SecondOrderMomentEqAccumulator<RegOrder, Rec> mxy;
-        SecondOrderMomentEqAccumulator<RegOrder, Rec> myy;
+        SecondOrderMomentEqAccumulator mxx;
+        SecondOrderMomentEqAccumulator mxy;
+        SecondOrderMomentEqAccumulator myy;
     };
 }

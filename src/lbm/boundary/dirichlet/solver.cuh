@@ -19,12 +19,10 @@
 
 namespace boundary::dirichlet
 {
-
-    template <int RegOrder, bool Rec, bool HighOrder>
     __device__ __forceinline__ void apply_boundary(
         real_t *__restrict__ pop,
         mask_t valid_mask,
-        NodeMomentsFor<RegOrder, Rec, HighOrder> &M)
+        NodeMoments &M)
     {
         const mask_t outgoing_mask = valid_mask;
         const mask_t incoming_mask = mask_opp(valid_mask);
@@ -47,39 +45,6 @@ namespace boundary::dirichlet
 
         M.mxx = M.ux * M.ux;
         M.myy = M.uy * M.uy;
-
-        M.rho = eval_density(acc, M);
-    }
-
-    template <bool HighOrder>
-    __device__ __forceinline__ void apply_boundary(
-        real_t *__restrict__ pop,
-        mask_t valid_mask,
-        NodeMomentsFor<3, false, HighOrder> &M)
-    {
-        const mask_t outgoing_mask = valid_mask;
-        const mask_t incoming_mask = mask_opp(valid_mask);
-
-        Accumulator acc{};
-
-#pragma unroll
-        for (int i = 0; i < Stencil::Q; ++i)
-        {
-            if (dir_valid(incoming_mask, i))
-                evaluate_incoming(acc, M, pop, i);
-
-            if (dir_valid(outgoing_mask, i))
-                evaluate_outgoing(acc, M, i);
-        }
-
-        acc.in.normalize();
-
-        M.mxy = (acc.rho.constant * acc.in.mxy - acc.mxy.constant) / (acc.mxy.mxy - acc.rho.mxy * acc.in.mxy);
-
-        M.mxx = M.ux * M.ux;
-        M.myy = M.uy * M.uy;
-        M.mxxy = M.ux * M.ux * M.uy;
-        M.mxyy = M.ux * M.uy * M.uy;
 
         M.rho = eval_density(acc, M);
     }

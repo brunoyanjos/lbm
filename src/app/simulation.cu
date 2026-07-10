@@ -5,10 +5,8 @@
 
 #include "../io/meta/output_meta.cuh"
 #include "../io/vtk/output_vtk.cuh"
-#include "../io/debug/debug_domain.cuh"
 #include "../io/diagnostics/output_tke_bin.cuh"
 #include "../io/diagnostics/output_centerline_bin.cuh"
-#include "../io/checkpoint/output_checkpoint.cuh"
 
 #include "../lbm/state/lbm_state.cuh"
 #include "../lbm/lbm_init_state.cuh"
@@ -22,49 +20,18 @@
 #include <chrono>
 #include <iostream>
 #include <algorithm>
+#include <stdexcept>
 
 namespace app
 {
-    namespace
-    {
-        bool should_sample_flow_averages(int step)
-        {
-            return step >= AVG_START_STEP;
-        }
-
-        double compute_tke_and_sample_flow_averages(const LBMState &state,
-                                                    io::FlowAverages &flow_averages,
-                                                    int step)
-        {
-            if (should_sample_flow_averages(step))
-                return io::compute_ke_and_sample_flow_averages_host_2d(state, flow_averages);
-
-            return io::compute_ke_host_2d(state);
-        }
-    }
-
     void run(const CudaConfig &cfg, const RunContext &ctx)
     {
         auto state = lbm_allocate_state();
-        io::FlowAverages flow_averages = io::make_flow_averages(state.N);
-        std::int64_t checkpoint_step = -1;
         int current_step = 0;
-        int last_checkpoint_step = -1;
 
         if (ctx.restart_from_checkpoint)
         {
-            const io::CheckpointConfig checkpoint_cfg = io::read_checkpoint_current(state, ctx.checkpoint_dir);
-            checkpoint_step = checkpoint_cfg.step;
-            current_step = static_cast<int>(std::min<std::int64_t>(checkpoint_step, N_STEPS));
-
-            if (ctx.enable_io)
-            {
-                io::seed_tke_history_from_checkpoint(ctx.checkpoint_dir, ctx.out_dir,
-                                                     static_cast<int>(checkpoint_step));
-                if (should_sample_flow_averages(static_cast<int>(checkpoint_step)))
-                    io::seed_flow_averages_from_checkpoint(ctx.checkpoint_dir, flow_averages,
-                                                           static_cast<int>(checkpoint_step));
-            }
+            throw std::runtime_error("Checkpoint restart is not available in this branch.");
         }
         else
         {
@@ -74,20 +41,11 @@ namespace app
         DomainTags tags = domain_tags_allocate();
         build_tags(tags);
 
-        if (ctx.verbose)
-        {
-            if (ctx.show_progress)
-                progress::ProgressUI::suspend_for_log();
-            io::debug_domain(tags);
-        }
-
         // ---------------- warmup ----------------
         if (!ctx.restart_from_checkpoint && ctx.enable_io)
         {
             upload_state_to_host(state);
-            const double ke = compute_tke_and_sample_flow_averages(state,
-                                                                   flow_averages,
-                                                                   current_step);
+            const double ke = io::compute_ke_host_2d(state);
 
             io::tke_bin_append(ctx.out_dir, current_step, ke);
             io::write_vti(state, cfg, current_step, ctx.out_dir);
@@ -143,19 +101,13 @@ namespace app
 
                 if (save_tke)
                 {
-                    const double ke = compute_tke_and_sample_flow_averages(state,
-                                                                           flow_averages,
-                                                                           current_step);
+                    const double ke = io::compute_ke_host_2d(state);
                     io::tke_bin_append(ctx.out_dir, current_step, ke);
                 }
 
                 if (save_vti)
                 {
                     io::write_vti(state, cfg, current_step, ctx.out_dir);
-                    io::write_checkpoint_current(state, current_step, ctx.out_dir);
-                    if (flow_averages.samples > 0)
-                        io::write_flow_averages_checkpoint(flow_averages, current_step, ctx.out_dir);
-                    last_checkpoint_step = current_step;
                 }
             }
 
@@ -183,14 +135,6 @@ namespace app
         if (ctx.enable_io)
         {
             upload_state_to_host(state);
-            if (last_checkpoint_step != t_end)
-            {
-                io::write_checkpoint_current(state, t_end, ctx.out_dir);
-                if (flow_averages.samples > 0)
-                    io::write_flow_averages_checkpoint(flow_averages, t_end, ctx.out_dir);
-            }
-            if (flow_averages.samples > 0)
-                io::write_flow_averages(flow_averages, t_end, ctx.out_dir);
             io::write_centerline_profiles(state, t_end * U_LID / NX, ctx.out_dir);
         }
 

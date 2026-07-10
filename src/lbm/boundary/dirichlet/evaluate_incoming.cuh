@@ -11,9 +11,8 @@
 
 namespace boundary::dirichlet
 {
-    template <int RegOrder, bool Rec, bool HighOrder>
     __device__ __forceinline__ void evaluate_incoming(Accumulator &acc,
-                                                      const NodeMomentsFor<RegOrder, Rec, HighOrder> &M,
+                                                      const NodeMoments &M,
                                                       const real_t *__restrict__ pop, int i)
     {
         acc.in.rho += pop[i];
@@ -25,30 +24,6 @@ namespace boundary::dirichlet
         acc.mxy.constant += M.ux * M.ux * moment_factor<MomentId::mxx, MomentId::mxy>(i);
         acc.mxy.constant += M.uy * M.uy * moment_factor<MomentId::myy, MomentId::mxy>(i);
 
-        if constexpr (RegOrder >= 3 && HighOrder)
-        {
-            acc.mxy.constant += M.ux * M.ux * M.ux * moment_factor<MomentId::mxxx, MomentId::mxy>(i);
-            acc.mxy.constant += M.uy * M.uy * M.uy * moment_factor<MomentId::myyy, MomentId::mxy>(i);
-        }
-
-        if constexpr (RegOrder >= 3 && !Rec)
-        {
-            acc.mxy.constant += M.ux * M.ux * M.uy * moment_factor<MomentId::mxxy, MomentId::mxy>(i);
-            acc.mxy.constant += M.ux * M.uy * M.uy * moment_factor<MomentId::mxyy, MomentId::mxy>(i);
-        }
-
-        if constexpr (RegOrder >= 3 && Rec)
-        {
-            acc.mxy.constant -= M.ux * M.ux * M.uy * moment_factor<MomentId::mxxy, MomentId::mxy>(i);
-            acc.mxy.constant -= M.ux * M.uy * M.uy * moment_factor<MomentId::mxyy, MomentId::mxy>(i);
-        }
-
         acc.mxy.mxy += moment_factor<MomentId::mxy, MomentId::mxy>(i);
-
-        if constexpr (RegOrder >= 3 && Rec)
-        {
-            acc.mxy.mxy += r::two * M.ux * moment_factor<MomentId::mxxy, MomentId::mxy>(i);
-            acc.mxy.mxy += r::two * M.uy * moment_factor<MomentId::mxyy, MomentId::mxy>(i);
-        }
     }
 }

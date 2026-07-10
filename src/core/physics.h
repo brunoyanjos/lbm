@@ -10,7 +10,7 @@
 constexpr real_t RE = static_cast<real_t>(LBM_RE);
 constexpr real_t U_LID = static_cast<real_t>(0.0256);
 
-constexpr real_t L_CHAR = static_cast<real_t>(NX - 1);
+constexpr real_t L_CHAR = static_cast<real_t>(NY - 1);
 
 constexpr real_t VISC = U_LID * L_CHAR / RE;
 constexpr real_t TAU = static_cast<real_t>(0.5) + Stencil::as2 * VISC;

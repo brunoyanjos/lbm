@@ -19,10 +19,6 @@
 #define LBM_VTI_SAVE_INTERVAL (100 * LBM_SAVE_INTERVAL)
 #endif
 
-#ifndef LBM_AVG_START_T_STAR
-#define LBM_AVG_START_T_STAR 0
-#endif
-
 #ifndef LBM_REG_ORDER
 #define LBM_REG_ORDER 2
 #endif
@@ -46,6 +42,5 @@
 constexpr int N_STEPS = LBM_N_STEPS;
 constexpr int SAVE_INTERVAL = LBM_SAVE_INTERVAL;
 constexpr int VTI_SAVE_INTERVAL = LBM_VTI_SAVE_INTERVAL;
-constexpr int AVG_START_STEP = real_t(LBM_AVG_START_T_STAR) * NX / U_LID;
 constexpr int REG_ORDER = LBM_REG_ORDER;
 constexpr bool USE_RECURRENCE = LBM_USE_RECURRENCE != 0;

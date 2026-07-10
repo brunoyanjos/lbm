@@ -6,6 +6,7 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 : "${DRY_RUN:=0}"
 : "${T_FINAL:=2000}"
+: "${NX_MULT:=4}"
 
 show_help() {
   cat <<EOF
@@ -14,10 +15,10 @@ Usage:
 
 Options:
   --stencil VALUE[,VALUE...]  Stencil(s) to run (default: D2Q9)
-  --grid VALUE[,VALUE...]     Grid size(s), N or NXxNY (default: 512)
+  --grid VALUE[,VALUE...]     Base NY size(s) (default: 512)
+  --ny VALUE[,VALUE...]       Alias for --grid
+  --nx_mult VALUE             NX multiplier, NX = VALUE * NY (default: ${NX_MULT})
   --re VALUE[,VALUE...]       Reynolds number(s) (default: 100,400,1000,3200,5000,7500,10000)
-  --reg_order VALUE[,VALUE...] Regularization order(s), 2 or 3 (default: 2)
-  --recurrence VALUE[,VALUE...] Recurrence flag(s), 0 or 1 (default: 0)
   --device VALUE[,VALUE...]   CUDA device id(s), assigned round-robin (default: 0)
   --t_final VALUE             Final t* passed to compile.sh --t_star_end (default: ${T_FINAL})
   --dry-run                   Print commands without running them
@@ -28,13 +29,10 @@ EOF
 parse_grid() {
   local grid="$1"
   if [[ "${grid}" =~ ^([0-9]+)$ ]]; then
-    GRID_NX="${BASH_REMATCH[1]}"
     GRID_NY="${BASH_REMATCH[1]}"
-  elif [[ "${grid}" =~ ^([0-9]+)[xX]([0-9]+)$ ]]; then
-    GRID_NX="${BASH_REMATCH[1]}"
-    GRID_NY="${BASH_REMATCH[2]}"
+    GRID_NX=$((GRID_NY * NX_MULT))
   else
-    echo "Error: invalid grid '${grid}'. Expected N or NXxNY, e.g. 256 or 256x256" >&2
+    echo "Error: invalid grid '${grid}'. Expected base NY only, e.g. 256" >&2
     exit 1
   fi
 }
@@ -65,8 +63,6 @@ stencils=()
 grids=()
 res=()
 devices=()
-reg_orders=()
-recurrences=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -74,20 +70,16 @@ while [[ $# -gt 0 ]]; do
       append_csv_values stencils "$2"
       shift 2
       ;;
-    --grid)
+    --grid|--ny)
       append_csv_values grids "$2"
+      shift 2
+      ;;
+    --nx_mult|--nx-mult)
+      NX_MULT="$2"
       shift 2
       ;;
     --re)
       append_csv_values res "$2"
-      shift 2
-      ;;
-    --reg_order|--reg-order)
-      append_csv_values reg_orders "$2"
-      shift 2
-      ;;
-    --recurrence)
-      append_csv_values recurrences "$2"
       shift 2
       ;;
     --device|--devices)
@@ -119,11 +111,20 @@ done
   exit 1
 }
 
+[[ "${NX_MULT}" =~ ^[0-9]+$ ]] || {
+  echo "Error: nx_mult must be numeric: '${NX_MULT}'" >&2
+  exit 1
+}
+((NX_MULT > 0)) || {
+  echo "Error: nx_mult must be positive: '${NX_MULT}'" >&2
+  exit 1
+}
+
 if ((${#stencils[@]} == 0)); then
   stencils=("D2Q9")
 fi
 
-# Tamanhos de grid. Use "256" para 256x256, ou "512x256" para retangular.
+# Tamanho base. O domínio final é (NX_MULT * NY) x NY.
 if ((${#grids[@]} == 0)); then
   grids=("512")
 fi
@@ -132,31 +133,9 @@ if ((${#res[@]} == 0)); then
   res=("100" "400" "1000" "3200" "5000" "7500" "10000")
 fi
 
-if ((${#reg_orders[@]} == 0)); then
-  reg_orders=("2")
-fi
-
-if ((${#recurrences[@]} == 0)); then
-  recurrences=("0")
-fi
-
 if ((${#devices[@]} == 0)); then
   devices=("0")
 fi
-
-for reg_order in "${reg_orders[@]}"; do
-  [[ "${reg_order}" =~ ^[23]$ ]] || {
-    echo "Error: reg_order must be 2 or 3: '${reg_order}'" >&2
-    exit 1
-  }
-done
-
-for recurrence in "${recurrences[@]}"; do
-  [[ "${recurrence}" =~ ^[01]$ ]] || {
-    echo "Error: recurrence must be 0 or 1: '${recurrence}'" >&2
-    exit 1
-  }
-done
 
 for device in "${devices[@]}"; do
   [[ "${device}" =~ ^[0-9]+$ ]] || {
@@ -170,50 +149,35 @@ for grid in "${grids[@]}"; do
   parse_grid "${grid}"
 
   for stencil in "${stencils[@]}"; do
-    for reg_order in "${reg_orders[@]}"; do
-      for recurrence in "${recurrences[@]}"; do
-        if [[ "${reg_order}" == "2" && "${recurrence}" == "1" ]]; then
-          echo "[SKIP] REG_ORDER=2 with RECURRENCE=1 is not a valid run_queue case"
-          continue
-        fi
+    for re in "${res[@]}"; do
+      device="${devices[$((case_index % ${#devices[@]}))]}"
+      ((case_index += 1))
 
-        for re in "${res[@]}"; do
-          device="${devices[$((case_index % ${#devices[@]}))]}"
-          ((case_index += 1))
+      ts="$(date +%Y%m%d_%H%M%S)"
+      run_id="${ts}_${stencil}_${GRID_NX}x${GRID_NY}_RE${re}_T${T_FINAL}_GPU${device}"
 
-          rec_tag=""
-          if [[ "${recurrence}" == "1" ]]; then
-            rec_tag="_rec"
-          fi
+      echo "================================================="
+      echo "[CASE] STENCIL=${stencil}  RE=${re}  GRID=${GRID_NX}x${GRID_NY}  NX_MULT=${NX_MULT}  T_FINAL=${T_FINAL}  DEVICE=${device}  RUN_ID=${run_id}"
+      echo "================================================="
 
-          ts="$(date +%Y%m%d_%H%M%S)"
-          run_id="${ts}_${stencil}_${GRID_NX}x${GRID_NY}_reg${reg_order}${rec_tag}_RE${re}_T${T_FINAL}_GPU${device}"
+      cmd=(bash "${ROOT_DIR}/compile.sh" \
+        --stencil "${stencil}" \
+        --re "${re}" \
+        --ny "${GRID_NY}" \
+        --nx_mult "${NX_MULT}" \
+        --device "${device}" \
+        --t_star_end "${T_FINAL}" \
+        --run_id "${run_id}")
 
-          echo "================================================="
-          echo "[CASE] STENCIL=${stencil}  REG_ORDER=${reg_order}  RECURRENCE=${recurrence}  RE=${re}  GRID=${GRID_NX}x${GRID_NY}  T_FINAL=${T_FINAL}  DEVICE=${device}  RUN_ID=${run_id}"
-          echo "================================================="
+      if [[ "${DRY_RUN}" == "1" ]]; then
+        printf '[DRY_RUN]'
+        printf ' %q' "${cmd[@]}"
+        printf '\n'
+      else
+        "${cmd[@]}"
+      fi
 
-          cmd=(bash "${ROOT_DIR}/compile.sh" \
-            --stencil "${stencil}" \
-            --reg_order "${reg_order}" \
-            --recurrence "${recurrence}" \
-            --re "${re}" \
-            --grid "${GRID_NX}x${GRID_NY}" \
-            --device "${device}" \
-            --t_star_end "${T_FINAL}" \
-            --run_id "${run_id}")
-
-          if [[ "${DRY_RUN}" == "1" ]]; then
-            printf '[DRY_RUN]'
-            printf ' %q' "${cmd[@]}"
-            printf '\n'
-          else
-            "${cmd[@]}"
-          fi
-
-          echo
-        done
-      done
+      echo
     done
   done
 done
