@@ -15,7 +15,7 @@ set -euo pipefail
 : "${IO:=1}"
 : "${MAXRREGCOUNT:=0}"
 : "${NY:=128}"
-: "${NX_MULT:=4}"
+: "${NX_MULT:=1}"
 : "${OUT_ROOT:=runs}"
 : "${PROGRESS:=1}"
 : "${PROGRESS_HZ:=2}"

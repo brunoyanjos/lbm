@@ -6,7 +6,7 @@
 #endif
 
 #ifndef LBM_NX
-#define LBM_NX (4 * LBM_NY)
+#define LBM_NX LBM_NY
 #endif
 
 constexpr int NX = LBM_NX;

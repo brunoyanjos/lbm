@@ -64,8 +64,10 @@ __global__ void cavity_square_tags_kernel(mask_t *__restrict__ valid,
 
     const bool on_bottom = (y == 0);
     const bool on_top = (y == NY - 1);
+    const bool on_left = (x == 0);
+    const bool on_right = (x == NX - 1);
 
-    const int bc_count = int(on_bottom) + int(on_top);
+    const int bc_count = int(on_left) + int(on_right) + int(on_bottom) + int(on_top);
 
     uint8_t wid = to_u8(NodeId::FLUID);
 
@@ -83,7 +85,7 @@ __global__ void cavity_square_tags_kernel(mask_t *__restrict__ valid,
         const int xn = x + Stencil::cx(i);
         const int yn = y + Stencil::cy(i);
 
-        if (yn < 0 || yn >= NY)
+        if (xn < 0 || xn >= NX || yn < 0 || yn >= NY)
             continue;
 
         m |= bit(i);

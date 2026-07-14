@@ -41,10 +41,34 @@ namespace boundary::dirichlet
 
         acc.in.normalize();
 
-        M.mxy = (acc.rho.constant * acc.in.mxy - acc.mxy.constant) / (acc.mxy.mxy - acc.rho.mxy * acc.in.mxy);
+        SystemData<3> S;
 
-        M.mxx = M.ux * M.ux;
-        M.myy = M.uy * M.uy;
+        // mxx
+        S.coeff(0, 0) = acc.mxx.mxx - acc.rho.mxx * acc.in.mxx; // mxx
+        S.coeff(0, 1) = acc.mxx.mxy - acc.rho.mxy * acc.in.mxx; // mxy
+        S.coeff(0, 2) = acc.mxx.myy - acc.rho.myy * acc.in.mxx; // myy
+
+        S.b[0] = acc.rho.constant * acc.in.mxx - acc.mxx.constant;
+
+        // mxx
+        S.coeff(1, 0) = acc.mxy.mxx - acc.rho.mxx * acc.in.mxy; // mxx
+        S.coeff(1, 1) = acc.mxy.mxy - acc.rho.mxy * acc.in.mxy; // mxy
+        S.coeff(1, 2) = acc.mxy.myy - acc.rho.myy * acc.in.mxy; // myy
+
+        S.b[1] = acc.rho.constant * acc.in.mxy - acc.mxy.constant;
+
+        // myy
+        S.coeff(2, 0) = acc.myy.mxx - acc.rho.mxx * acc.in.myy; // mxx
+        S.coeff(2, 1) = acc.myy.mxy - acc.rho.mxy * acc.in.myy; // mxy
+        S.coeff(2, 2) = acc.myy.myy - acc.rho.myy * acc.in.myy; // myy
+
+        S.b[2] = acc.rho.constant * acc.in.myy - acc.myy.constant;
+
+        gaussianElimination(S);
+
+        M.mxx = S.x[0];
+        M.mxy = S.x[1];
+        M.myy = S.x[2];
 
         M.rho = eval_density(acc, M);
     }

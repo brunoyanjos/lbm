@@ -17,10 +17,12 @@ namespace boundary::dirichlet
         acc.rho.constant += moment_factor<MomentId::rho, MomentId::rho>(i);
         acc.rho.constant += M.ux * moment_factor<MomentId::ux, MomentId::rho>(i);
         acc.rho.constant += M.uy * moment_factor<MomentId::uy, MomentId::rho>(i);
-        acc.rho.constant += M.ux * M.ux * moment_factor<MomentId::mxx, MomentId::rho>(i);
+        acc.rho.constant += OMEGA * M.ux * M.ux * moment_factor<MomentId::mxx, MomentId::rho>(i);
         acc.rho.constant += OMEGA * M.ux * M.uy * moment_factor<MomentId::mxy, MomentId::rho>(i);
-        acc.rho.constant += M.uy * M.uy * moment_factor<MomentId::myy, MomentId::rho>(i);
+        acc.rho.constant += OMEGA * M.uy * M.uy * moment_factor<MomentId::myy, MomentId::rho>(i);
 
+        acc.rho.mxx += (r::one - OMEGA) * moment_factor<MomentId::mxx, MomentId::rho>(i);
         acc.rho.mxy += (r::one - OMEGA) * moment_factor<MomentId::mxy, MomentId::rho>(i);
+        acc.rho.myy += (r::one - OMEGA) * moment_factor<MomentId::myy, MomentId::rho>(i);
     }
 }

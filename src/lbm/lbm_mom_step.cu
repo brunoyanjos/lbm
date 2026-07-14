@@ -44,16 +44,7 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
     }
     else
     {
-        if (is_full_mask(valid_ms))
-        {
-            evaluate_moments_from_pop(pop, M);
-        }
-        else
-        {
-            load_state_moments(S, c, idxGlobal(x, y), M);
-
-            boundary::fluid::apply_boundary(pop, valid_ms, M);
-        }
+        evaluate_moments_from_pop(pop, M);
     }
 
     // 3) scale to the stored basis
