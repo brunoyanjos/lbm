@@ -107,7 +107,7 @@ namespace io
         cfg.vti_save_interval = VTI_SAVE_INTERVAL;
 
         cfg.re = static_cast<double>(RE);
-        cfg.u_lid = static_cast<double>(U_LID);
+        cfg.u_lid = static_cast<double>(U);
         cfg.tau = static_cast<double>(TAU);
         cfg.omega = static_cast<double>(OMEGA);
 

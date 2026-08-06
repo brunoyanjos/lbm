@@ -42,7 +42,7 @@ set -euo pipefail
 : "${AVG_START_T_STAR:=0}"
 : "${VERBOSE:=0}"
 : "${VTI_INTERVAL:=0}"
-: "${WARMUP:=100}"
+: "${WARMUP:=0}"
 
 # =====================================================
 # Helpers

@@ -29,7 +29,7 @@ namespace io
             const int idx = xc + NX * y;
             const int idx_n = (xc - 1) + NX * y;
 
-            ux_xc_y[y] = (state.h_ux[idx] / Stencil::as2 + state.h_ux[idx_n] / Stencil::as2) * real_t(0.5);
+            ux_xc_y[y] = (state.h_ux[idx] + state.h_ux[idx_n]) * real_t(0.5);
         }
 
         for (int x = 0; x < NX; ++x)
@@ -37,7 +37,7 @@ namespace io
             const int idx = x + NX * yc;
             const int idx_n = x + NX * (yc - 1);
 
-            uy_yc_x[x] = (state.h_uy[idx] / Stencil::as2 + state.h_uy[idx_n] / Stencil::as2) * real_t(0.5);
+            uy_yc_x[x] = (state.h_uy[idx] + state.h_uy[idx_n]) * real_t(0.5);
         }
 
         const std::string path = centerline_path(out_dir);

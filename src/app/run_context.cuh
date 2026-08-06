@@ -11,7 +11,7 @@ namespace app
         std::string checkpoint_run_id;
         std::string checkpoint_dir;
         bool enable_io = true;
-        int warmup_steps = 100;
+        int warmup_steps = 0;
         int vti_interval = 0;
         bool verbose = false;
 

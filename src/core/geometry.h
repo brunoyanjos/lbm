@@ -9,5 +9,5 @@
 #define LBM_NY 128
 #endif
 
-constexpr int NX = LBM_NX;
-constexpr int NY = LBM_NY;
+constexpr int NX = 128;
+constexpr int NY = 256;

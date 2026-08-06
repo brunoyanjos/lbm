@@ -11,6 +11,6 @@ __device__ __forceinline__ void bc_velocity(NodeMoments &M, const int &x, const 
     M.ux = r::zero;
     M.uy = r::zero;
 
-    if (y == NY - 1)
-        M.ux = U_LID;
+    // if (y == NY - 1)
+    //     M.ux = U;
 }

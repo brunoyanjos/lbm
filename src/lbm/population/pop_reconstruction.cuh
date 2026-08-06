@@ -29,11 +29,25 @@ __device__ __forceinline__ void reconstruct_streamed_pop(real_t *__restrict__ po
         const real_t mxy = S.d_mxy[c][n_idx];
         const real_t myy = S.d_myy[c][n_idx];
 
+        const real_t ux_col = ux + r::half * GRAVITY_X;
+        const real_t uy_col = uy + r::half * GRAVITY_Y;
+
+        const real_t mxx_col = (r::one - OMEGA) * mxx + OMEGA * ux * ux + r::two * (r::one - OMEGA * r::half) * GRAVITY_X * ux;
+        const real_t mxy_col = (r::one - OMEGA) * mxy + OMEGA * ux * uy + (r::one - OMEGA * r::half) * (GRAVITY_Y * ux + GRAVITY_X * uy);
+        const real_t myy_col = (r::one - OMEGA) * myy + OMEGA * uy * uy + r::two * (r::one - OMEGA * r::half) * GRAVITY_Y * uy;
+
+        // const real_t ux_barra = ux - r::half * GRAVITY_X;
+        // const real_t uy_barra = uy - r::half * GRAVITY_Y;
+
+        // const real_t mxx_barra = (r::one - OMEGA) * mxx + OMEGA * ux * ux + r::two * (r::one - r::half * OMEGA) * GRAVITY_X * ux;
+        // const real_t mxy_barra = (r::one - OMEGA) * mxy + OMEGA * ux * uy + (r::one - r::half * OMEGA) * r::half * (GRAVITY_X * uy + GRAVITY_Y * ux);
+        // const real_t myy_barra = (r::one - OMEGA) * myy + OMEGA * uy * uy + r::two * (r::one - r::half * OMEGA) * GRAVITY_Y * uy;
+
         pop[i] = Stencil::w(i) * rho *
                  (r::one +
-                  ux * hermite<MomentId::ux>(i) + uy * hermite<MomentId::uy>(i) +
-                  mxx * hermite<MomentId::mxx>(i) + mxy * hermite<MomentId::mxy>(i) +
-                  myy * hermite<MomentId::myy>(i));
+                  scale_factor<MomentId::ux>() * ux_col * hermite<MomentId::ux>(i) + scale_factor<MomentId::uy>() * uy_col * hermite<MomentId::uy>(i) +
+                  scale_factor<MomentId::mxx>() * mxx_col * hermite<MomentId::mxx>(i) + scale_factor<MomentId::mxy>() * mxy_col * hermite<MomentId::mxy>(i) +
+                  scale_factor<MomentId::myy>() * myy_col * hermite<MomentId::myy>(i));
     }
 }
 

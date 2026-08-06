@@ -82,9 +82,9 @@ __global__ void init_on_device(LBMState S)
         myy += pop[i] * hermite<MomentId::myy>(i);
     }
 
-    S.d_mxx[c][idx] = mxx * inv_rho * inv_scale_factor<MomentId::mxx>();
-    S.d_mxy[c][idx] = mxy * inv_rho * inv_scale_factor<MomentId::mxy>();
-    S.d_myy[c][idx] = myy * inv_rho * inv_scale_factor<MomentId::myy>();
+    S.d_mxx[c][idx] = mxx * inv_rho * scale_factor<MomentId::mxx>();
+    S.d_mxy[c][idx] = mxy * inv_rho * scale_factor<MomentId::mxy>();
+    S.d_myy[c][idx] = myy * inv_rho * scale_factor<MomentId::myy>();
 
     init_extra_state_fields(S, c, idx);
 }

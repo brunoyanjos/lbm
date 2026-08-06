@@ -8,11 +8,11 @@
 #endif
 
 #ifndef LBM_N_STEPS
-#define LBM_N_STEPS (real_t(LBM_T_STAR_END) * NX / U_LID)
+#define LBM_N_STEPS (real_t(LBM_T_STAR_END) * NX / U)
 #endif
 
 #ifndef LBM_SAVE_INTERVAL
-#define LBM_SAVE_INTERVAL (NX / U_LID)
+#define LBM_SAVE_INTERVAL (NX / U)
 #endif
 
 #ifndef LBM_VTI_SAVE_INTERVAL
@@ -51,10 +51,10 @@
 #error "LBM_USE_SYMBOLIC_BOUNDARY must be 0 or 1"
 #endif
 
-constexpr int N_STEPS = LBM_N_STEPS;
-constexpr int SAVE_INTERVAL = LBM_SAVE_INTERVAL;
-constexpr int VTI_SAVE_INTERVAL = LBM_VTI_SAVE_INTERVAL;
-constexpr int AVG_START_STEP = real_t(LBM_AVG_START_T_STAR) * NX / U_LID;
+constexpr int N_STEPS = 1000000;
+constexpr int SAVE_INTERVAL = 1000;
+constexpr int VTI_SAVE_INTERVAL = 10000;
+constexpr int AVG_START_STEP = real_t(LBM_AVG_START_T_STAR) * NX / U;
 constexpr int REG_ORDER = LBM_REG_ORDER;
 constexpr bool USE_RECURRENCE = LBM_USE_RECURRENCE != 0;
 constexpr bool USE_SYMBOLIC_BOUNDARY = LBM_USE_SYMBOLIC_BOUNDARY != 0;

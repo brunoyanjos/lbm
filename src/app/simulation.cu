@@ -191,7 +191,7 @@ namespace app
             }
             if (flow_averages.samples > 0)
                 io::write_flow_averages(flow_averages, t_end, ctx.out_dir);
-            io::write_centerline_profiles(state, t_end * U_LID / NX, ctx.out_dir);
+            io::write_centerline_profiles(state, t_end * U / NX, ctx.out_dir);
         }
 
         const double gpu_s = gt.stop_seconds();

@@ -81,7 +81,7 @@ namespace io
                 }
             }
 
-            real_t norm = count * U_LID * U_LID;
+            real_t norm = count * U * U;
             real_t inv_norm = real_t(1) / norm;
 
             sum *= inv_norm;

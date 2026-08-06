@@ -57,10 +57,10 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
     }
 
     // 3) scale to the stored basis
-    scale_to_stored_basis(M);
+    // scale_to_stored_basis(M);
 
     // 4) collide in moment space
-    moment_space_collision(M);
+    // moment_space_collision(M);
 
     // 5) store next
     store_next_state(S, n, idx, M);

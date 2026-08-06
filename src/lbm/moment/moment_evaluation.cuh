@@ -39,6 +39,13 @@ __device__ __forceinline__ void evaluate_moments_from_pop(const real_t *__restri
     M.mxx *= inv_rho;
     M.mxy *= inv_rho;
     M.myy *= inv_rho;
+
+    M.ux += GRAVITY_X * r::half;
+    M.uy += GRAVITY_Y * r::half;
+
+    M.mxx += GRAVITY_X * M.ux;
+    M.mxy += r::half * (GRAVITY_Y * M.ux + GRAVITY_X * M.uy);
+    M.myy += GRAVITY_Y * M.uy;
 }
 
 template <bool HighOrder>
