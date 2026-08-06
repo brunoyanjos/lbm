@@ -9,11 +9,11 @@
 template <int RegOrder, bool Rec, bool HighOrder>
 __device__ __forceinline__ void scale_to_stored_basis(NodeMomentsFor<RegOrder, Rec, HighOrder> &M)
 {
-    M.ux *= scale_factor<MomentId::ux>();
-    M.uy *= scale_factor<MomentId::uy>();
-    M.mxx *= scale_factor<MomentId::mxx>();
-    M.mxy *= scale_factor<MomentId::mxy>();
-    M.myy *= scale_factor<MomentId::myy>();
+    M.uxA *= scale_factor<MomentId::ux>();
+    M.uyA *= scale_factor<MomentId::uy>();
+    M.mxxA *= scale_factor<MomentId::mxx>();
+    M.mxyA *= scale_factor<MomentId::mxy>();
+    M.myyA *= scale_factor<MomentId::myy>();
 }
 
 template <bool HighOrder>

@@ -11,7 +11,7 @@ __device__ __forceinline__ void load_state_moments(const LBMStateFor<RegOrder, R
                                                    size_t idx,
                                                    NodeMomentsFor<RegOrder, Rec, HighOrder> &M)
 {
-    M.rho = S.d_rho[c][idx] + RHO_0;
+    M.rho = S.d_rho[c][idx] + RHOA_0;
     M.ux = S.d_ux[c][idx] * inv_scale_factor<MomentId::ux>();
     M.uy = S.d_uy[c][idx] * inv_scale_factor<MomentId::uy>();
     M.mxx = S.d_mxx[c][idx] * inv_scale_factor<MomentId::mxx>();
@@ -25,7 +25,7 @@ __device__ __forceinline__ void load_state_moments(const LBMStateFor<3, false, H
                                                    size_t idx,
                                                    NodeMomentsFor<3, false, HighOrder> &M)
 {
-    M.rho = S.d_rho[c][idx] + RHO_0;
+    M.rho = S.d_rho[c][idx] + RHOA_0;
     M.ux = S.d_ux[c][idx] * inv_scale_factor<MomentId::ux>();
     M.uy = S.d_uy[c][idx] * inv_scale_factor<MomentId::uy>();
     M.mxx = S.d_mxx[c][idx] * inv_scale_factor<MomentId::mxx>();

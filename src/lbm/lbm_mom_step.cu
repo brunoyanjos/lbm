@@ -30,31 +30,28 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
     const uint8_t node_id = T.d_node[idx];
     const mask_t valid_ms = T.d_valid[idx];
 
-    real_t pop[Stencil::Q];
+    real_t popA[Stencil::Q];
+    real_t popB[Stencil::Q];
 
-    reconstruct_streamed_pop(pop, S, c, x, y);
+    reconstruct_streamed_pop(popA, popB, S, c, x, y);
 
     NodeMoments M{};
 
     if (node_id != to_u8(NodeId::FLUID))
     {
-        bc_velocity(M, x, y);
+        const mask_t incoming_mask = mask_opp(valid_ms);
 
-        boundary::dirichlet::apply_boundary(pop, node_id, valid_ms, M);
-    }
-    else
-    {
-        if (is_full_mask(valid_ms))
+        for (int i = 0; i < Stencil::Q; ++i)
         {
-            evaluate_moments_from_pop(pop, M);
-        }
-        else
-        {
-            load_state_moments(S, c, idxGlobal(x, y), M);
-
-            boundary::fluid::apply_boundary(pop, valid_ms, M);
+            if (!dir_valid(incoming_mask, i))
+            {
+                popA[i] = popA[Stencil::opp(i)];
+                popB[i] = popB[Stencil::opp(i)];
+            }
         }
     }
+
+    evaluate_moments_from_pop(popA, popB, M);
 
     // 3) scale to the stored basis
     // scale_to_stored_basis(M);

@@ -156,12 +156,12 @@ namespace io
         const CheckpointConfig cfg = make_checkpoint_config(step, state.cur);
         file.write(reinterpret_cast<const char *>(&cfg), sizeof(cfg));
 
-        write_field(file, state.h_rho, state.bytes_field);
-        write_field(file, state.h_ux, state.bytes_field);
-        write_field(file, state.h_uy, state.bytes_field);
-        write_field(file, state.h_mxx, state.bytes_field);
-        write_field(file, state.h_mxy, state.bytes_field);
-        write_field(file, state.h_myy, state.bytes_field);
+        write_field(file, state.h_rhoA, state.bytes_field);
+        write_field(file, state.h_uxA, state.bytes_field);
+        write_field(file, state.h_uyA, state.bytes_field);
+        write_field(file, state.h_mxxA, state.bytes_field);
+        write_field(file, state.h_mxyA, state.bytes_field);
+        write_field(file, state.h_myyA, state.bytes_field);
         write_extra_fields(file, state);
 
         if (!file.good())
@@ -183,24 +183,24 @@ namespace io
         validate_checkpoint_config(cfg);
 
         state.cur = cfg.cur;
-        read_field(file, state.h_rho, state.bytes_field);
-        read_field(file, state.h_ux, state.bytes_field);
-        read_field(file, state.h_uy, state.bytes_field);
-        read_field(file, state.h_mxx, state.bytes_field);
-        read_field(file, state.h_mxy, state.bytes_field);
-        read_field(file, state.h_myy, state.bytes_field);
+        read_field(file, state.h_rhoA, state.bytes_field);
+        read_field(file, state.h_uxA, state.bytes_field);
+        read_field(file, state.h_uyA, state.bytes_field);
+        read_field(file, state.h_mxxA, state.bytes_field);
+        read_field(file, state.h_mxyA, state.bytes_field);
+        read_field(file, state.h_myyA, state.bytes_field);
         read_extra_fields(file, state);
 
         if (!file.good())
             throw std::runtime_error("Could not read checkpoint payload: " + filepath.string());
 
         const int c = state.cur;
-        CUDA_CHECK(cudaMemcpy(state.d_rho[c], state.h_rho, state.bytes_field, cudaMemcpyHostToDevice));
-        CUDA_CHECK(cudaMemcpy(state.d_ux[c], state.h_ux, state.bytes_field, cudaMemcpyHostToDevice));
-        CUDA_CHECK(cudaMemcpy(state.d_uy[c], state.h_uy, state.bytes_field, cudaMemcpyHostToDevice));
-        CUDA_CHECK(cudaMemcpy(state.d_mxx[c], state.h_mxx, state.bytes_field, cudaMemcpyHostToDevice));
-        CUDA_CHECK(cudaMemcpy(state.d_mxy[c], state.h_mxy, state.bytes_field, cudaMemcpyHostToDevice));
-        CUDA_CHECK(cudaMemcpy(state.d_myy[c], state.h_myy, state.bytes_field, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(state.d_rhoA[c], state.h_rhoA, state.bytes_field, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(state.d_uxA[c], state.h_uxA, state.bytes_field, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(state.d_uyA[c], state.h_uyA, state.bytes_field, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(state.d_mxxA[c], state.h_mxxA, state.bytes_field, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(state.d_mxyA[c], state.h_mxyA, state.bytes_field, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(state.d_myyA[c], state.h_myyA, state.bytes_field, cudaMemcpyHostToDevice));
         upload_extra_fields(state, c);
 
         std::cout << "[CHECKPOINT] loaded " << filepath.string()

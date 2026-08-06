@@ -10,12 +10,19 @@ __device__ __forceinline__ void store_next_state(const LBMStateFor<RegOrder, Rec
                                                  size_t idx,
                                                  const NodeMomentsFor<RegOrder, Rec, HighOrder> &M)
 {
-    S.d_rho[n][idx] = M.rho - RHO_0;
-    S.d_ux[n][idx] = M.ux;
-    S.d_uy[n][idx] = M.uy;
-    S.d_mxx[n][idx] = M.mxx;
-    S.d_mxy[n][idx] = M.mxy;
-    S.d_myy[n][idx] = M.myy;
+    S.d_rhoA[n][idx] = M.rhoA;
+    S.d_uxA[n][idx] = M.uxA;
+    S.d_uyA[n][idx] = M.uyA;
+    S.d_mxxA[n][idx] = M.mxxA;
+    S.d_mxyA[n][idx] = M.mxyA;
+    S.d_myyA[n][idx] = M.myyA;
+
+    S.d_rhoB[n][idx] = M.rhoB;
+    S.d_uxB[n][idx] = M.uxB;
+    S.d_uyB[n][idx] = M.uyB;
+    S.d_mxxB[n][idx] = M.mxxB;
+    S.d_mxyB[n][idx] = M.mxyB;
+    S.d_myyB[n][idx] = M.myyB;
 }
 
 template <bool HighOrder>
@@ -24,7 +31,7 @@ __device__ __forceinline__ void store_next_state(const LBMStateFor<3, false, Hig
                                                  size_t idx,
                                                  const NodeMomentsFor<3, false, HighOrder> &M)
 {
-    S.d_rho[n][idx] = M.rho - RHO_0;
+    S.d_rho[n][idx] = M.rho;
     S.d_ux[n][idx] = M.ux;
     S.d_uy[n][idx] = M.uy;
     S.d_mxx[n][idx] = M.mxx;

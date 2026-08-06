@@ -8,11 +8,15 @@
 struct SecondOrderState
 {
     // host (single buffer for output)
-    real_t *h_rho, *h_ux, *h_uy, *h_mxx, *h_mxy, *h_myy;
+    real_t *h_rhoA, *h_uxA, *h_uyA, *h_mxxA, *h_mxyA, *h_myyA;
+    real_t *h_rhoB, *h_uxB, *h_uyB, *h_mxxB, *h_mxyB, *h_myyB;
 
     // device ping-pong
-    real_t *d_rho[2], *d_ux[2], *d_uy[2];
-    real_t *d_mxx[2], *d_mxy[2], *d_myy[2];
+    real_t *d_rhoA[2], *d_uxA[2], *d_uyA[2];
+    real_t *d_mxxA[2], *d_mxyA[2], *d_myyA[2];
+
+    real_t *d_rhoB[2], *d_uxB[2], *d_uyB[2];
+    real_t *d_mxxB[2], *d_mxyB[2], *d_myyB[2];
 
     int cur;
     size_t N;

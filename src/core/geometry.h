@@ -10,4 +10,6 @@
 #endif
 
 constexpr int NX = 128;
-constexpr int NY = 256;
+constexpr int NY = 128;
+
+constexpr int RADIUS = NX / 4;

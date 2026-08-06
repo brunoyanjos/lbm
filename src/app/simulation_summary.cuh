@@ -53,7 +53,7 @@ inline void print_simulation_summary(const CudaConfig &cfg,
     std::cout << "nu (visc)         : " << VISC << "\n";
     std::cout << "tau               : " << TAU << "\n";
     std::cout << "omega             : " << OMEGA << "\n";
-    std::cout << "rho_0             : " << RHO_0 << "\n\n";
+    std::cout << "rho_0             : " << RHOA_0 << "\n\n";
 
     // Kernel config
     const size_t threads_per_block = cfg.block.x * cfg.block.y;

@@ -53,7 +53,31 @@ namespace io
             for (int x = 0; x < nx; ++x)
             {
                 const size_t idx = idxGlobal(x, y);
-                const real_t rho = S.h_rho[idx] + RHO_0;
+                const real_t rho = S.h_rhoA[idx] - S.h_rhoB[idx];
+                file << "          " << static_cast<float>(rho) << "\n";
+            }
+        }
+        file << "        </DataArray>\n";
+
+        file << "        <DataArray type=\"Float32\" Name=\"rhoA\" format=\"ascii\">\n";
+        for (int y = 0; y < ny; ++y)
+        {
+            for (int x = 0; x < nx; ++x)
+            {
+                const size_t idx = idxGlobal(x, y);
+                const real_t rho = S.h_rhoA[idx];
+                file << "          " << static_cast<float>(rho) << "\n";
+            }
+        }
+        file << "        </DataArray>\n";
+
+        file << "        <DataArray type=\"Float32\" Name=\"rhoB\" format=\"ascii\">\n";
+        for (int y = 0; y < ny; ++y)
+        {
+            for (int x = 0; x < nx; ++x)
+            {
+                const size_t idx = idxGlobal(x, y);
+                const real_t rho = S.h_rhoB[idx];
                 file << "          " << static_cast<float>(rho) << "\n";
             }
         }
@@ -66,7 +90,7 @@ namespace io
             for (int x = 0; x < nx; ++x)
             {
                 const size_t idx = idxGlobal(x, y);
-                const real_t ux = S.h_ux[idx];
+                const real_t ux = S.h_uxA[idx];
                 file << "          " << static_cast<float>(ux) << "\n";
             }
         }
@@ -79,7 +103,7 @@ namespace io
             for (int x = 0; x < nx; ++x)
             {
                 const size_t idx = idxGlobal(x, y);
-                const real_t uy = S.h_uy[idx];
+                const real_t uy = S.h_uyA[idx];
                 file << "          " << static_cast<float>(uy) << "\n";
             }
         }
@@ -92,8 +116,8 @@ namespace io
             for (int x = 0; x < nx; ++x)
             {
                 const size_t idx = idxGlobal(x, y);
-                const real_t ux = S.h_ux[idx];
-                const real_t uy = S.h_uy[idx];
+                const real_t ux = S.h_uxA[idx];
+                const real_t uy = S.h_uyA[idx];
 
                 file << "          "
                      << static_cast<float>(ux) << " "

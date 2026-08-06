@@ -55,20 +55,43 @@ __global__ void init_on_device(LBMState S)
     if (idx == INVALID_INDEX)
         return;
 
-    const real_t rho = RHO_0;
+    real_t rhoA = RHOA_0;
+    real_t rhoB = RHOB_0;
     const real_t ux = r::zero;
     const real_t uy = r::zero;
 
-    real_t pop[Stencil::Q];
-    equilibrium(pop, rho, ux, uy);
+    // const real_t x_diff = x - NX / 2;
+    // const real_t y_diff = y - NY / 2;
+
+    // if (x_diff * x_diff + y_diff * y_diff < RADIUS * RADIUS)
+    if (x < NY / 2)
+    {
+        rhoA = r::zero;
+        // rhoB = r::zero;
+    }
+    else
+    {
+        // rhoA = r::zero;
+        rhoB = r::zero;
+    }
+
+    real_t popA[Stencil::Q];
+    equilibrium(popA, rhoA, ux, uy);
+
+    real_t popB[Stencil::Q];
+    equilibrium(popB, rhoB, ux, uy);
 
     const int c = S.cur;
 
-    S.d_rho[c][idx] = rho - RHO_0;
-    S.d_ux[c][idx] = ux * Stencil::as2;
-    S.d_uy[c][idx] = uy * Stencil::as2;
+    S.d_rhoA[c][idx] = rhoA;
+    S.d_uxA[c][idx] = ux * Stencil::as2;
+    S.d_uyA[c][idx] = uy * Stencil::as2;
 
-    const real_t inv_rho = r::one / rho;
+    S.d_rhoB[c][idx] = rhoB;
+    S.d_uxB[c][idx] = ux * Stencil::as2;
+    S.d_uyB[c][idx] = uy * Stencil::as2;
+
+    const real_t inv_rho = r::one / (rhoA + rhoB);
 
     real_t mxx = r::zero;
     real_t mxy = r::zero;
@@ -77,14 +100,18 @@ __global__ void init_on_device(LBMState S)
 #pragma unroll
     for (int i = 0; i < Stencil::Q; ++i)
     {
-        mxx += pop[i] * hermite<MomentId::mxx>(i);
-        mxy += pop[i] * hermite<MomentId::mxy>(i);
-        myy += pop[i] * hermite<MomentId::myy>(i);
+        mxx += (popA[i] + popB[i]) * hermite<MomentId::mxx>(i);
+        mxy += (popA[i] + popB[i]) * hermite<MomentId::mxy>(i);
+        myy += (popA[i] + popB[i]) * hermite<MomentId::myy>(i);
     }
 
-    S.d_mxx[c][idx] = mxx * inv_rho * scale_factor<MomentId::mxx>();
-    S.d_mxy[c][idx] = mxy * inv_rho * scale_factor<MomentId::mxy>();
-    S.d_myy[c][idx] = myy * inv_rho * scale_factor<MomentId::myy>();
+    S.d_mxxA[c][idx] = mxx * inv_rho * scale_factor<MomentId::mxx>();
+    S.d_mxyA[c][idx] = mxy * inv_rho * scale_factor<MomentId::mxy>();
+    S.d_myyA[c][idx] = myy * inv_rho * scale_factor<MomentId::myy>();
+
+    S.d_mxxB[c][idx] = mxx * inv_rho * scale_factor<MomentId::mxx>();
+    S.d_mxyB[c][idx] = mxy * inv_rho * scale_factor<MomentId::mxy>();
+    S.d_myyB[c][idx] = myy * inv_rho * scale_factor<MomentId::myy>();
 
     init_extra_state_fields(S, c, idx);
 }
@@ -102,11 +129,19 @@ void upload_state_to_host(LBMState &S)
 {
     const int c = S.cur;
 
-    CUDA_CHECK(cudaMemcpy(S.h_rho, S.d_rho[c], S.bytes_field, cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(S.h_ux, S.d_ux[c], S.bytes_field, cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(S.h_uy, S.d_uy[c], S.bytes_field, cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(S.h_mxx, S.d_mxx[c], S.bytes_field, cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(S.h_mxy, S.d_mxy[c], S.bytes_field, cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(S.h_myy, S.d_myy[c], S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h_rhoA, S.d_rhoA[c], S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h_uxA, S.d_uxA[c], S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h_uyA, S.d_uyA[c], S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h_mxxA, S.d_mxxA[c], S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h_mxyA, S.d_mxyA[c], S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h_myyA, S.d_myyA[c], S.bytes_field, cudaMemcpyDeviceToHost));
+
+    CUDA_CHECK(cudaMemcpy(S.h_rhoB, S.d_rhoB[c], S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h_uxB, S.d_uxB[c], S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h_uyB, S.d_uyB[c], S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h_mxxB, S.d_mxxB[c], S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h_mxyB, S.d_mxyB[c], S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h_myyB, S.d_myyB[c], S.bytes_field, cudaMemcpyDeviceToHost));
+
     upload_extra_state_fields(S, c);
 }

@@ -51,10 +51,10 @@
 #error "LBM_USE_SYMBOLIC_BOUNDARY must be 0 or 1"
 #endif
 
-constexpr int N_STEPS = 1000000;
-constexpr int SAVE_INTERVAL = 1000;
-constexpr int VTI_SAVE_INTERVAL = 10000;
-constexpr int AVG_START_STEP = real_t(LBM_AVG_START_T_STAR) * NX / U;
+constexpr int N_STEPS = 10000;
+constexpr int SAVE_INTERVAL = 100;
+constexpr int VTI_SAVE_INTERVAL = 100;
+constexpr int AVG_START_STEP = 0;
 constexpr int REG_ORDER = LBM_REG_ORDER;
 constexpr bool USE_RECURRENCE = LBM_USE_RECURRENCE != 0;
 constexpr bool USE_SYMBOLIC_BOUNDARY = LBM_USE_SYMBOLIC_BOUNDARY != 0;

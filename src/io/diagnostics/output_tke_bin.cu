@@ -39,13 +39,13 @@ namespace io
                     real_t rho_E = 0.0;
                     real_t rho_e = 0.0;
 
-                    const real_t rho = state.h_rho[idx] + RHO_0;
+                    const real_t rho = state.h_rhoA[idx] + RHOA_0;
                     const real_t inv_rho = r::one / rho;
-                    const real_t ux = state.h_ux[idx];
-                    const real_t uy = state.h_uy[idx];
-                    const real_t mxx = state.h_mxx[idx];
-                    const real_t mxy = state.h_mxy[idx];
-                    const real_t myy = state.h_myy[idx];
+                    const real_t ux = state.h_uxA[idx];
+                    const real_t uy = state.h_uyA[idx];
+                    const real_t mxx = state.h_mxxA[idx];
+                    const real_t mxy = state.h_mxyA[idx];
+                    const real_t myy = state.h_myyA[idx];
 
                     const double uxd = static_cast<double>(ux) * inv_scale_factor<MomentId::ux>();
                     const double uyd = static_cast<double>(uy) * inv_scale_factor<MomentId::uy>();
