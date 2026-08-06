@@ -14,7 +14,9 @@ enum class MomentId : int
     mxxx,
     mxxy,
     mxyy,
-    myyy
+    myyy,
+
+    mxxyy,
 };
 
 enum class NonlinearMomentId : int

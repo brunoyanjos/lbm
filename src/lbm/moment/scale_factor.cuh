@@ -69,6 +69,12 @@ struct ScaleFactor<MomentId::myyy>
     static constexpr real_t value = Stencil::as6 * r::sixth;
 };
 
+template <>
+struct ScaleFactor<MomentId::mxxyy>
+{
+    static constexpr real_t value = Stencil::as8 * r::four;
+};
+
 template <auto Id>
 __host__ __device__ __forceinline__ real_t
 scale_factor()

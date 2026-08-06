@@ -11,6 +11,7 @@ namespace D2Q9
     constexpr real_t as2 = r::one / cs2;
     constexpr real_t as4 = as2 * as2;
     constexpr real_t as6 = as4 * as2;
+    constexpr real_t as8 = as6 * as2;
 
     __host__ __device__ __forceinline__ int cx(int i)
     {

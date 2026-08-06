@@ -51,6 +51,7 @@ inline void print_simulation_summary(const CudaConfig &cfg,
     std::cout << "U_lid             : " << U << "\n";
     std::cout << "L_char            : " << L_CHAR << "\n";
     std::cout << "nu (visc)         : " << VISC << "\n";
+    std::cout << "visc_ratio        : " << VISC_RATIO << "\n";
     std::cout << "tau               : " << TAU << "\n";
     std::cout << "omega             : " << OMEGA << "\n";
     std::cout << "rho_0             : " << RHOA_0 << "\n\n";

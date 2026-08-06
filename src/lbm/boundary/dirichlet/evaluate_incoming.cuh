@@ -13,7 +13,7 @@ namespace boundary::dirichlet
 {
     template <int RegOrder, bool Rec, bool HighOrder>
     __device__ __forceinline__ void evaluate_incoming(Accumulator &acc,
-                                                      const NodeMomentsFor<RegOrder, Rec, HighOrder> &M,
+                                                      const NodeMomentsFor<RegOrder, HighOrder> &M,
                                                       const real_t *__restrict__ pop, int i)
     {
         acc.in.rho += pop[i];

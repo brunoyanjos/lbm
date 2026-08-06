@@ -90,7 +90,7 @@ namespace io
             for (int x = 0; x < nx; ++x)
             {
                 const size_t idx = idxGlobal(x, y);
-                const real_t ux = S.h_uxA[idx];
+                const real_t ux = S.h_ux[idx];
                 file << "          " << static_cast<float>(ux) << "\n";
             }
         }
@@ -103,7 +103,7 @@ namespace io
             for (int x = 0; x < nx; ++x)
             {
                 const size_t idx = idxGlobal(x, y);
-                const real_t uy = S.h_uyA[idx];
+                const real_t uy = S.h_uy[idx];
                 file << "          " << static_cast<float>(uy) << "\n";
             }
         }
@@ -116,8 +116,8 @@ namespace io
             for (int x = 0; x < nx; ++x)
             {
                 const size_t idx = idxGlobal(x, y);
-                const real_t ux = S.h_uxA[idx];
-                const real_t uy = S.h_uyA[idx];
+                const real_t ux = S.h_ux[idx];
+                const real_t uy = S.h_uy[idx];
 
                 file << "          "
                      << static_cast<float>(ux) << " "

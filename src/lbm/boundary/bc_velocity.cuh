@@ -8,8 +8,8 @@
 
 __device__ __forceinline__ void bc_velocity(NodeMoments &M, const int &x, const int &y)
 {
-    M.uxA = r::zero;
-    M.uyA = r::zero;
+    M.ux = r::zero;
+    M.uy = r::zero;
 
     // if (y == NY - 1)
     //     M.ux = U;

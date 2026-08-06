@@ -9,6 +9,7 @@
 #include "lbm/boundary/fluid/solver.cuh"
 #include "lbm/boundary/bc_velocity.cuh"
 #include "lbm/collision/collision.cuh"
+#include "lbm/interface/evaluate_normal.cuh"
 #include "lbm/moment/moment_evaluation.cuh"
 #include "lbm/moment/moment_scaling.cuh"
 #include "lbm/moment/node_moments.cuh"
@@ -56,8 +57,10 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
     // 3) scale to the stored basis
     // scale_to_stored_basis(M);
 
+    S.d_n[n][idx] = evaluate_normal(c, x, y, S);
+
     // 4) collide in moment space
-    // moment_space_collision(M);
+    moment_space_collision(M);
 
     // 5) store next
     store_next_state(S, n, idx, M);

@@ -13,7 +13,7 @@ namespace boundary::dirichlet
 {
     template <int RegOrder, bool Rec, bool HighOrder>
     __device__ __forceinline__ void evaluate_outgoing(Accumulator &acc,
-                                                      const NodeMomentsFor<RegOrder, Rec, HighOrder> &M, int i)
+                                                      const NodeMomentsFor<RegOrder, HighOrder> &M, int i)
     {
         acc.rho.constant += moment_factor<MomentId::rho, MomentId::rho>(i);
         acc.rho.constant += M.ux * moment_factor<MomentId::ux, MomentId::rho>(i);

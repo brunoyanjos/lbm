@@ -84,13 +84,13 @@ namespace io
                 throw std::runtime_error("Checkpoint cur buffer must be 0 or 1");
         }
 
-        template <int RegOrder, bool Rec, bool HighOrder>
-        void write_extra_fields(std::ofstream &, const LBMStateFor<RegOrder, Rec, HighOrder> &)
+        template <int RegOrder, bool HighOrder>
+        void write_extra_fields(std::ofstream &, const LBMStateFor<RegOrder, HighOrder> &)
         {
         }
 
         template <bool HighOrder>
-        void write_extra_fields(std::ofstream &file, const LBMStateFor<3, false, HighOrder> &state)
+        void write_extra_fields(std::ofstream &file, const LBMStateFor<3, HighOrder> &state)
         {
             if constexpr (HighOrder)
                 write_field(file, state.h_mxxx, state.bytes_field);
@@ -100,13 +100,13 @@ namespace io
                 write_field(file, state.h_myyy, state.bytes_field);
         }
 
-        template <int RegOrder, bool Rec, bool HighOrder>
-        void read_extra_fields(std::ifstream &, LBMStateFor<RegOrder, Rec, HighOrder> &)
+        template <int RegOrder, bool HighOrder>
+        void read_extra_fields(std::ifstream &, LBMStateFor<RegOrder, HighOrder> &)
         {
         }
 
         template <bool HighOrder>
-        void read_extra_fields(std::ifstream &file, LBMStateFor<3, false, HighOrder> &state)
+        void read_extra_fields(std::ifstream &file, LBMStateFor<3, HighOrder> &state)
         {
             if constexpr (HighOrder)
                 read_field(file, state.h_mxxx, state.bytes_field);
@@ -116,13 +116,13 @@ namespace io
                 read_field(file, state.h_myyy, state.bytes_field);
         }
 
-        template <int RegOrder, bool Rec, bool HighOrder>
-        void upload_extra_fields(const LBMStateFor<RegOrder, Rec, HighOrder> &, int)
+        template <int RegOrder, bool HighOrder>
+        void upload_extra_fields(const LBMStateFor<RegOrder, HighOrder> &, int)
         {
         }
 
         template <bool HighOrder>
-        void upload_extra_fields(const LBMStateFor<3, false, HighOrder> &state, int c)
+        void upload_extra_fields(const LBMStateFor<3, HighOrder> &state, int c)
         {
             if constexpr (HighOrder)
                 CUDA_CHECK(cudaMemcpy(state.d_mxxx[c], state.h_mxxx, state.bytes_field, cudaMemcpyHostToDevice));
@@ -157,11 +157,11 @@ namespace io
         file.write(reinterpret_cast<const char *>(&cfg), sizeof(cfg));
 
         write_field(file, state.h_rhoA, state.bytes_field);
-        write_field(file, state.h_uxA, state.bytes_field);
-        write_field(file, state.h_uyA, state.bytes_field);
-        write_field(file, state.h_mxxA, state.bytes_field);
-        write_field(file, state.h_mxyA, state.bytes_field);
-        write_field(file, state.h_myyA, state.bytes_field);
+        write_field(file, state.h_ux, state.bytes_field);
+        write_field(file, state.h_uy, state.bytes_field);
+        write_field(file, state.h_mxx, state.bytes_field);
+        write_field(file, state.h_mxy, state.bytes_field);
+        write_field(file, state.h_myy, state.bytes_field);
         write_extra_fields(file, state);
 
         if (!file.good())
@@ -184,11 +184,11 @@ namespace io
 
         state.cur = cfg.cur;
         read_field(file, state.h_rhoA, state.bytes_field);
-        read_field(file, state.h_uxA, state.bytes_field);
-        read_field(file, state.h_uyA, state.bytes_field);
-        read_field(file, state.h_mxxA, state.bytes_field);
-        read_field(file, state.h_mxyA, state.bytes_field);
-        read_field(file, state.h_myyA, state.bytes_field);
+        read_field(file, state.h_ux, state.bytes_field);
+        read_field(file, state.h_uy, state.bytes_field);
+        read_field(file, state.h_mxx, state.bytes_field);
+        read_field(file, state.h_mxy, state.bytes_field);
+        read_field(file, state.h_myy, state.bytes_field);
         read_extra_fields(file, state);
 
         if (!file.good())
@@ -196,11 +196,11 @@ namespace io
 
         const int c = state.cur;
         CUDA_CHECK(cudaMemcpy(state.d_rhoA[c], state.h_rhoA, state.bytes_field, cudaMemcpyHostToDevice));
-        CUDA_CHECK(cudaMemcpy(state.d_uxA[c], state.h_uxA, state.bytes_field, cudaMemcpyHostToDevice));
-        CUDA_CHECK(cudaMemcpy(state.d_uyA[c], state.h_uyA, state.bytes_field, cudaMemcpyHostToDevice));
-        CUDA_CHECK(cudaMemcpy(state.d_mxxA[c], state.h_mxxA, state.bytes_field, cudaMemcpyHostToDevice));
-        CUDA_CHECK(cudaMemcpy(state.d_mxyA[c], state.h_mxyA, state.bytes_field, cudaMemcpyHostToDevice));
-        CUDA_CHECK(cudaMemcpy(state.d_myyA[c], state.h_myyA, state.bytes_field, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(state.d_ux[c], state.h_ux, state.bytes_field, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(state.d_uy[c], state.h_uy, state.bytes_field, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(state.d_mxx[c], state.h_mxx, state.bytes_field, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(state.d_mxy[c], state.h_mxy, state.bytes_field, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(state.d_myy[c], state.h_myy, state.bytes_field, cudaMemcpyHostToDevice));
         upload_extra_fields(state, c);
 
         std::cout << "[CHECKPOINT] loaded " << filepath.string()

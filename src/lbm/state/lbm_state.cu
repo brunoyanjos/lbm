@@ -4,13 +4,13 @@
 #include "../../core/indexing.cuh"
 #include "../../core/memory.cuh"
 
-template <int RegOrder, bool Rec, bool HighOrder>
-void allocate_extra_state_fields(LBMStateFor<RegOrder, Rec, HighOrder> &)
+template <int RegOrder, bool HighOrder>
+void allocate_extra_state_fields(LBMStateFor<RegOrder, HighOrder> &)
 {
 }
 
 template <bool HighOrder>
-void allocate_extra_state_fields(LBMStateFor<3, false, HighOrder> &S)
+void allocate_extra_state_fields(LBMStateFor<3, HighOrder> &S)
 {
     hostMalloc_safe(S.h_mxxy, S.bytes_field);
     hostMalloc_safe(S.h_mxyy, S.bytes_field);
@@ -26,13 +26,13 @@ void allocate_extra_state_fields(LBMStateFor<3, false, HighOrder> &S)
     }
 }
 
-template <int RegOrder, bool Rec, bool HighOrder>
-void free_extra_state_fields(LBMStateFor<RegOrder, Rec, HighOrder> &)
+template <int RegOrder, bool HighOrder>
+void free_extra_state_fields(LBMStateFor<RegOrder, HighOrder> &)
 {
 }
 
 template <bool HighOrder>
-void free_extra_state_fields(LBMStateFor<3, false, HighOrder> &S)
+void free_extra_state_fields(LBMStateFor<3, HighOrder> &S)
 {
     hostFree_safe(S.h_mxxy);
     hostFree_safe(S.h_mxyy);
@@ -56,32 +56,24 @@ LBMState lbm_allocate_state()
     S.cur = 0;
 
     hostMalloc_safe(S.h_rhoA, S.bytes_field);
-    hostMalloc_safe(S.h_uxA, S.bytes_field);
-    hostMalloc_safe(S.h_uyA, S.bytes_field);
-    hostMalloc_safe(S.h_mxxA, S.bytes_field);
-    hostMalloc_safe(S.h_mxyA, S.bytes_field);
-    hostMalloc_safe(S.h_myyA, S.bytes_field);
-
     hostMalloc_safe(S.h_rhoB, S.bytes_field);
-    hostMalloc_safe(S.h_uxB, S.bytes_field);
-    hostMalloc_safe(S.h_uyB, S.bytes_field);
-    hostMalloc_safe(S.h_mxxB, S.bytes_field);
-    hostMalloc_safe(S.h_mxyB, S.bytes_field);
-    hostMalloc_safe(S.h_myyB, S.bytes_field);
+
+    hostMalloc_safe(S.h_ux, S.bytes_field);
+    hostMalloc_safe(S.h_uy, S.bytes_field);
+    hostMalloc_safe(S.h_mxx, S.bytes_field);
+    hostMalloc_safe(S.h_mxy, S.bytes_field);
+    hostMalloc_safe(S.h_myy, S.bytes_field);
+
+    cudaMalloc2_safe(S.d_n, S.N * sizeof(Normal));
 
     cudaMalloc2_safe(S.d_rhoA, S.bytes_field);
-    cudaMalloc2_safe(S.d_uxA, S.bytes_field);
-    cudaMalloc2_safe(S.d_uyA, S.bytes_field);
-    cudaMalloc2_safe(S.d_mxxA, S.bytes_field);
-    cudaMalloc2_safe(S.d_mxyA, S.bytes_field);
-    cudaMalloc2_safe(S.d_myyA, S.bytes_field);
-
     cudaMalloc2_safe(S.d_rhoB, S.bytes_field);
-    cudaMalloc2_safe(S.d_uxB, S.bytes_field);
-    cudaMalloc2_safe(S.d_uyB, S.bytes_field);
-    cudaMalloc2_safe(S.d_mxxB, S.bytes_field);
-    cudaMalloc2_safe(S.d_mxyB, S.bytes_field);
-    cudaMalloc2_safe(S.d_myyB, S.bytes_field);
+
+    cudaMalloc2_safe(S.d_ux, S.bytes_field);
+    cudaMalloc2_safe(S.d_uy, S.bytes_field);
+    cudaMalloc2_safe(S.d_mxx, S.bytes_field);
+    cudaMalloc2_safe(S.d_mxy, S.bytes_field);
+    cudaMalloc2_safe(S.d_myy, S.bytes_field);
 
     allocate_extra_state_fields(S);
 
@@ -91,32 +83,22 @@ LBMState lbm_allocate_state()
 void lbm_free_state(LBMState &S)
 {
     hostFree_safe(S.h_rhoA);
-    hostFree_safe(S.h_uxA);
-    hostFree_safe(S.h_uyA);
-    hostFree_safe(S.h_mxxA);
-    hostFree_safe(S.h_mxyA);
-    hostFree_safe(S.h_myyA);
-
     hostFree_safe(S.h_rhoB);
-    hostFree_safe(S.h_uxB);
-    hostFree_safe(S.h_uyB);
-    hostFree_safe(S.h_mxxB);
-    hostFree_safe(S.h_mxyB);
-    hostFree_safe(S.h_myyB);
+
+    hostFree_safe(S.h_ux);
+    hostFree_safe(S.h_uy);
+    hostFree_safe(S.h_mxx);
+    hostFree_safe(S.h_mxy);
+    hostFree_safe(S.h_myy);
 
     cudaFree2_safe(S.d_rhoA);
-    cudaFree2_safe(S.d_uxA);
-    cudaFree2_safe(S.d_uyA);
-    cudaFree2_safe(S.d_mxxA);
-    cudaFree2_safe(S.d_mxyA);
-    cudaFree2_safe(S.d_myyA);
-
     cudaFree2_safe(S.d_rhoB);
-    cudaFree2_safe(S.d_uxB);
-    cudaFree2_safe(S.d_uyB);
-    cudaFree2_safe(S.d_mxxB);
-    cudaFree2_safe(S.d_mxyB);
-    cudaFree2_safe(S.d_myyB);
+
+    cudaFree2_safe(S.d_ux);
+    cudaFree2_safe(S.d_uy);
+    cudaFree2_safe(S.d_mxx);
+    cudaFree2_safe(S.d_mxy);
+    cudaFree2_safe(S.d_myy);
 
     free_extra_state_fields(S);
 }

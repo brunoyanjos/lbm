@@ -12,13 +12,13 @@
 #include "lbm_equilibrium.cuh"
 #include "stencil_active.cuh"
 
-template <int RegOrder, bool Rec, bool HighOrder>
-__device__ __forceinline__ void init_extra_state_fields(LBMStateFor<RegOrder, Rec, HighOrder> &, int, size_t)
+template <int RegOrder, bool HighOrder>
+__device__ __forceinline__ void init_extra_state_fields(LBMStateFor<RegOrder, HighOrder> &, int, size_t)
 {
 }
 
 template <bool HighOrder>
-__device__ __forceinline__ void init_extra_state_fields(LBMStateFor<3, false, HighOrder> &S, int c, size_t idx)
+__device__ __forceinline__ void init_extra_state_fields(LBMStateFor<3, HighOrder> &S, int c, size_t idx)
 {
     S.d_mxxy[c][idx] = r::zero;
     S.d_mxyy[c][idx] = r::zero;
@@ -30,13 +30,13 @@ __device__ __forceinline__ void init_extra_state_fields(LBMStateFor<3, false, Hi
     }
 }
 
-template <int RegOrder, bool Rec, bool HighOrder>
-__host__ void upload_extra_state_fields(LBMStateFor<RegOrder, Rec, HighOrder> &, int)
+template <int RegOrder, bool HighOrder>
+__host__ void upload_extra_state_fields(LBMStateFor<RegOrder, HighOrder> &, int)
 {
 }
 
 template <bool HighOrder>
-__host__ void upload_extra_state_fields(LBMStateFor<3, false, HighOrder> &S, int c)
+__host__ void upload_extra_state_fields(LBMStateFor<3, HighOrder> &S, int c)
 {
     CUDA_CHECK(cudaMemcpy(S.h_mxxy, S.d_mxxy[c], S.bytes_field, cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(S.h_mxyy, S.d_mxyy[c], S.bytes_field, cudaMemcpyDeviceToHost));
@@ -64,14 +64,12 @@ __global__ void init_on_device(LBMState S)
     // const real_t y_diff = y - NY / 2;
 
     // if (x_diff * x_diff + y_diff * y_diff < RADIUS * RADIUS)
-    if (x < NY / 2)
+    if (x < NX / 2)
     {
         rhoA = r::zero;
-        // rhoB = r::zero;
     }
     else
     {
-        // rhoA = r::zero;
         rhoB = r::zero;
     }
 
@@ -84,12 +82,10 @@ __global__ void init_on_device(LBMState S)
     const int c = S.cur;
 
     S.d_rhoA[c][idx] = rhoA;
-    S.d_uxA[c][idx] = ux * Stencil::as2;
-    S.d_uyA[c][idx] = uy * Stencil::as2;
-
     S.d_rhoB[c][idx] = rhoB;
-    S.d_uxB[c][idx] = ux * Stencil::as2;
-    S.d_uyB[c][idx] = uy * Stencil::as2;
+
+    S.d_ux[c][idx] = ux * Stencil::as2;
+    S.d_uy[c][idx] = uy * Stencil::as2;
 
     const real_t inv_rho = r::one / (rhoA + rhoB);
 
@@ -105,13 +101,9 @@ __global__ void init_on_device(LBMState S)
         myy += (popA[i] + popB[i]) * hermite<MomentId::myy>(i);
     }
 
-    S.d_mxxA[c][idx] = mxx * inv_rho * scale_factor<MomentId::mxx>();
-    S.d_mxyA[c][idx] = mxy * inv_rho * scale_factor<MomentId::mxy>();
-    S.d_myyA[c][idx] = myy * inv_rho * scale_factor<MomentId::myy>();
-
-    S.d_mxxB[c][idx] = mxx * inv_rho * scale_factor<MomentId::mxx>();
-    S.d_mxyB[c][idx] = mxy * inv_rho * scale_factor<MomentId::mxy>();
-    S.d_myyB[c][idx] = myy * inv_rho * scale_factor<MomentId::myy>();
+    S.d_mxx[c][idx] = mxx * inv_rho * scale_factor<MomentId::mxx>();
+    S.d_mxy[c][idx] = mxy * inv_rho * scale_factor<MomentId::mxy>();
+    S.d_myy[c][idx] = myy * inv_rho * scale_factor<MomentId::myy>();
 
     init_extra_state_fields(S, c, idx);
 }
@@ -130,18 +122,13 @@ void upload_state_to_host(LBMState &S)
     const int c = S.cur;
 
     CUDA_CHECK(cudaMemcpy(S.h_rhoA, S.d_rhoA[c], S.bytes_field, cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(S.h_uxA, S.d_uxA[c], S.bytes_field, cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(S.h_uyA, S.d_uyA[c], S.bytes_field, cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(S.h_mxxA, S.d_mxxA[c], S.bytes_field, cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(S.h_mxyA, S.d_mxyA[c], S.bytes_field, cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(S.h_myyA, S.d_myyA[c], S.bytes_field, cudaMemcpyDeviceToHost));
-
     CUDA_CHECK(cudaMemcpy(S.h_rhoB, S.d_rhoB[c], S.bytes_field, cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(S.h_uxB, S.d_uxB[c], S.bytes_field, cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(S.h_uyB, S.d_uyB[c], S.bytes_field, cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(S.h_mxxB, S.d_mxxB[c], S.bytes_field, cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(S.h_mxyB, S.d_mxyB[c], S.bytes_field, cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(S.h_myyB, S.d_myyB[c], S.bytes_field, cudaMemcpyDeviceToHost));
+
+    CUDA_CHECK(cudaMemcpy(S.h_ux, S.d_ux[c], S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h_uy, S.d_uy[c], S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h_mxx, S.d_mxx[c], S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h_mxy, S.d_mxy[c], S.bytes_field, cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(S.h_myy, S.d_myy[c], S.bytes_field, cudaMemcpyDeviceToHost));
 
     upload_extra_state_fields(S, c);
 }

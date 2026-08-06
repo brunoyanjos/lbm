@@ -7,27 +7,27 @@
 struct SecondOrderMoments
 {
     real_t rhoA, rhoB;
-    real_t uxA, uxB;
-    real_t uyA, uyB;
-    real_t mxxA, mxxB;
-    real_t mxyA, mxyB;
-    real_t myyA, myyB;
+    real_t ux;
+    real_t uy;
+    real_t mxx;
+    real_t mxy;
+    real_t myy;
 };
 
-template <int Order, bool Rec, bool HighOrder>
+template <int Order, bool HighOrder>
 struct NodeMomentsFor : SecondOrderMoments
 {
 };
 
 template <>
-struct NodeMomentsFor<3, false, false> : SecondOrderMoments
+struct NodeMomentsFor<3, false> : SecondOrderMoments
 {
     real_t mxxy;
     real_t mxyy;
 };
 
 template <>
-struct NodeMomentsFor<3, false, true> : SecondOrderMoments
+struct NodeMomentsFor<3, true> : SecondOrderMoments
 {
     real_t mxxx;
     real_t mxxy;
@@ -35,4 +35,4 @@ struct NodeMomentsFor<3, false, true> : SecondOrderMoments
     real_t myyy;
 };
 
-using NodeMoments = NodeMomentsFor<REG_ORDER, USE_RECURRENCE, Stencil::high_order>;
+using NodeMoments = NodeMomentsFor<REG_ORDER, Stencil::high_order>;
