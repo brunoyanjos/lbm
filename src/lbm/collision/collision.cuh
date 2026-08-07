@@ -24,13 +24,13 @@ __device__ void moment_space_collision(NodeMomentsFor<RegOrder, HighOrder> &M)
     const real_t uy_col = M.uy + r::half * GRAVITY_Y;
 
     const real_t mxx_col = (r::one - OMEGA_MIX) * M.mxx +
-                           TOTAL_MASS_DENSITY * inv_rho * r::two * (r::one - OMEGA_MIX * r::half) * GRAVITY_X * M.ux;
+                           r::two * (r::one - OMEGA_MIX * r::half) * GRAVITY_X * M.ux;
 
     const real_t mxy_col = (r::one - OMEGA_MIX) * M.mxy +
-                           TOTAL_MASS_DENSITY * inv_rho * (r::one - OMEGA_MIX * r::half) * (GRAVITY_Y * M.ux + GRAVITY_X * M.uy);
+                           (r::one - OMEGA_MIX * r::half) * (GRAVITY_Y * M.ux + GRAVITY_X * M.uy);
 
     const real_t myy_col = (r::one - OMEGA_MIX) * M.myy +
-                           TOTAL_MASS_DENSITY * inv_rho * r::two * (r::one - OMEGA_MIX * r::half) * GRAVITY_Y * M.uy;
+                           r::two * (r::one - OMEGA_MIX * r::half) * GRAVITY_Y * M.uy;
 
     M.ux = ux_col;
     M.uy = uy_col;

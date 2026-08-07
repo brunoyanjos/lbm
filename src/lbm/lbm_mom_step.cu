@@ -31,10 +31,11 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
     const uint8_t node_id = T.d_node[idx];
     const mask_t valid_ms = T.d_valid[idx];
 
+    real_t pop[Stencil::Q];
     real_t popA[Stencil::Q];
     real_t popB[Stencil::Q];
 
-    reconstruct_streamed_pop(popA, popB, S, c, x, y);
+    reconstruct_streamed_pop(pop, popA, popB, S, c, x, y);
 
     NodeMoments M{};
 
@@ -48,11 +49,12 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
             {
                 popA[i] = popA[Stencil::opp(i)];
                 popB[i] = popB[Stencil::opp(i)];
+                pop[i] = pop[Stencil::opp(i)];
             }
         }
     }
 
-    evaluate_moments_from_pop(popA, popB, M);
+    evaluate_moments_from_pop(pop, popA, popB, M);
 
     // 3) scale to the stored basis
     // scale_to_stored_basis(M);

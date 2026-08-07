@@ -51,9 +51,9 @@
 #error "LBM_USE_SYMBOLIC_BOUNDARY must be 0 or 1"
 #endif
 
-constexpr int N_STEPS = 200;
-constexpr int SAVE_INTERVAL = 100;
-constexpr int VTI_SAVE_INTERVAL = 10;
+constexpr int N_STEPS = 200000;
+constexpr int SAVE_INTERVAL = 50000;
+constexpr int VTI_SAVE_INTERVAL = 50000;
 constexpr int AVG_START_STEP = 0;
 constexpr int REG_ORDER = LBM_REG_ORDER;
 constexpr bool USE_RECURRENCE = LBM_USE_RECURRENCE != 0;
