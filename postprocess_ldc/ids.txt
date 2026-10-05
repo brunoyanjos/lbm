@@ -1,0 +1,4 @@
+# IDs dos run | nome pra aparecer nas legendas
+
+20260731_130019_D2Q9_double_1024x1024_RE3200 | Traditional
+20260801_122314_D2Q9_double_1024x1024_RE3200_ISOTH | Isothermal

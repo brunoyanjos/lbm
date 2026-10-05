@@ -30,6 +30,7 @@ set -euo pipefail
 : "${VERBOSE:=0}"
 : "${VTI_INTERVAL:=0}"
 : "${WARMUP:=100}"
+: "${ISOTHERMAL:=0}"
 
 # =====================================================
 # Helpers
@@ -98,6 +99,7 @@ while [[ $# -gt 0 ]]; do
     --progress_hz)    PROGRESS_HZ="$2"; shift 2 ;;
     --ptxas_verbose)  PTXAS_VERBOSE="$2"; shift 2 ;;
     --maxrregcount)   MAXRREGCOUNT="$2"; shift 2 ;;
+    --isothermal)     ISOTHERMAL="$2"; shift 2;;
     -h|--help)
       cat <<EOF
 Usage:
@@ -210,6 +212,8 @@ fi
 
 NVCCFLAGS+=(-DLBM_T_STAR_END="${T_STAR_END}")
 
+NVCCFLAGS+=(-DLBM_ISOTHERMAL="${ISOTHERMAL}")
+
 if [[ "${REAL}" == "double" ]]; then
   NVCCFLAGS+=(-DREAL_T_IS_DOUBLE)
 fi
@@ -275,7 +279,11 @@ echo "✔ Build successful: ${BIN_PATH}"
 
 if [[ "${RUN}" == "1" ]]; then
   if [[ -z "${RUN_ID}" ]]; then
-    CURRENT_RUN_ID="$(date +%Y%m%d_%H%M%S)_${STENCIL}_${REAL}_${GRID_NX}x${GRID_NY}${RE:+_RE${RE}}"
+    RUN_TAG=""
+    [[ -n "${RE}" ]] && RUN_TAG+="_RE${RE}"
+    [[ "${ISOTHERMAL}" == "1" ]] && RUN_TAG+="_ISOTH"
+
+    CURRENT_RUN_ID="$(date +%Y%m%d_%H%M%S)_${STENCIL}_${REAL}_${GRID_NX}x${GRID_NY}${RUN_TAG}"
   else
     CURRENT_RUN_ID="${RUN_ID}"
   fi

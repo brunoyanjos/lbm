@@ -39,6 +39,16 @@
 #error "LBM_USE_RECURRENCE requires LBM_REG_ORDER == 3"
 #endif
 
+#ifndef LBM_ISOTHERMAL
+#define LBM_ISOTHERMAL 0
+#endif
+
+#if LBM_ISOTHERMAL != 0 && LBM_ISOTHERMAL != 1
+#error "LBM_ISOTHERMAL must be 0 or 1"
+#endif
+
+constexpr bool ISOTHERMAL = LBM_ISOTHERMAL != 0;
+
 constexpr int N_STEPS = LBM_N_STEPS;
 constexpr int SAVE_INTERVAL = LBM_SAVE_INTERVAL;
 constexpr int VTI_SAVE_INTERVAL = LBM_VTI_SAVE_INTERVAL;

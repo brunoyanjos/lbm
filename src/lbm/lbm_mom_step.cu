@@ -47,6 +47,21 @@ __global__ void lbm_mom_step_kernel(LBMState S, DomainTags T)
         evaluate_moments_from_pop(pop, M);
     }
 
+    //----------------------------------------------------------------------------------
+    // ISOTHERMAL MODIFICATION
+    
+    if constexpr (ISOTHERMAL)
+    {
+        const real_t mxx_original = M.mxx;
+        const real_t myy_original = M.myy;
+
+        const real_t u2 = M.ux * M.ux + M.uy * M.uy;
+
+        M.mxx = real_t(0.5) * (mxx_original - myy_original + u2);
+        M.myy = real_t(0.5) * (myy_original - mxx_original + u2);
+    }
+    //-----------------------------------------------------------------------------------
+
     // 3) scale to the stored basis
     scale_to_stored_basis(M);
 
